@@ -1,0 +1,5 @@
+{
+  "value": "number (0–100)",
+  "unit": "relative humidity (%)",
+  "ts": "unix timestamp (seconds)"
+}

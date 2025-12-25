@@ -1,0 +1,16 @@
+planty/
+  └── {plant_id}/
+        ├── telemetry/
+        │     ├── moisture
+        │     ├── temperature
+        │     └── humidity
+        ├── state/
+        │     ├── online
+        │     └── last_watered
+        ├── events/
+        │     └── watered
+        ├── config/
+        │     ├── threshold
+        │     └── report_interval
+        └── command/
+              └── water

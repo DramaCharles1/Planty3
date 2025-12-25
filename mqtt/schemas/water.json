@@ -1,0 +1,5 @@
+{
+  "duration": "number (miliseconds)",
+  "unit": "string (miliseconds)",
+  "ts": "unix timestamp (seconds)"
+}
