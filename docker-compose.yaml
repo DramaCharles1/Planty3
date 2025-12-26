@@ -38,13 +38,22 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
+
+  mqtt_client:
+    build: ./backend
+    container_name: django-mqtt-client
+    command: python manage.py mqtt_client
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - mqtt
+      - postgres
+    restart: unless-stopped
     environment:
       - DJANGO_DB_HOST=postgres
       - DJANGO_DB_NAME=plantydb
       - DJANGO_DB_USER=user
       - DJANGO_DB_PASSWORD=password
-    depends_on:
-      - postgres
 
 volumes:
   mosquitto_data:
