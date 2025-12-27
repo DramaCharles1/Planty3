@@ -2,3 +2,4 @@ Django>=5.0
 psycopg[binary]
 djangorestframework
 paho-mqtt
+python-decouple

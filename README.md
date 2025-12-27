@@ -27,3 +27,10 @@ Publish to topic example:
 2. Start Adminer service: `docker compose up adminer`
 3. Go to Adminer web interface at `http://localhost:8080`
 4. Log in using POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB. Use db service name (postgre) for "server". System should be PostgreSQL.
+
+## Django
+
+**Super user**
+Username: root
+Email address: root@test.com
+Password: password

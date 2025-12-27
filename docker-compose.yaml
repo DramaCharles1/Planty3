@@ -15,14 +15,16 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: plantydb
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql
     ports:
       - "5432:5432"
     restart: unless-stopped
+    env_file:
+      - .env
 
   adminer:
     image: adminer
@@ -38,6 +40,8 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
+    env_file:
+      - .env
 
   mqtt_client:
     build: ./backend
@@ -50,10 +54,12 @@ services:
       - postgres
     restart: unless-stopped
     environment:
-      - DJANGO_DB_HOST=postgres
-      - DJANGO_DB_NAME=plantydb
-      - DJANGO_DB_USER=user
-      - DJANGO_DB_PASSWORD=password
+      - DJANGO_DB_HOST=${DB_HOST}
+      - DJANGO_DB_NAME=${DB_NAME}
+      - DJANGO_DB_USER=${DB_USER}
+      - DJANGO_DB_PASSWORD=${DB_PASSWORD}
+    env_file:
+      - .env
 
 volumes:
   mosquitto_data:
