@@ -32,7 +32,7 @@ class PlantState(models.Model):
 
     last_moisture = models.FloatField(null=True, blank=True)
     last_temperature = models.FloatField(null=True, blank=True)
-    battery_level = models.FloatField(null=True, blank=True)
+    battery_level = models.FloatField(null=True, blank=True) # remove and migrate
 
     updated_at = models.DateTimeField(auto_now=True)
 

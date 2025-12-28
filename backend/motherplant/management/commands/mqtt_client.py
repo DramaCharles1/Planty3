@@ -6,9 +6,8 @@ import paho.mqtt.client as mqtt
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.utils.timezone import make_aware
 
-from backend.motherplant.models import Plant, PlantState, Telemetry
+from motherplant.models import Plant, PlantState, Telemetry
 
 
 # -------------------------------------------------
@@ -81,9 +80,7 @@ def on_message(client, userdata, msg):
         return
 
     try:
-        timestamp = make_aware(
-            datetime.fromtimestamp(ts, tz=timezone.utc)
-        )
+        timestamp = datetime.fromtimestamp(ts, tz=timezone.utc)
     except Exception:
         logger.warning("Invalid timestamp: %s", ts)
         return
@@ -92,7 +89,6 @@ def on_message(client, userdata, msg):
     try:
         plant = Plant.objects.get(
             plant_id=plant_id,
-            is_active=True
         )
     except Plant.DoesNotExist:
         logger.warning(
@@ -116,8 +112,6 @@ def on_message(client, userdata, msg):
         state.last_temperature = value
     elif metric == "moisture":
         state.last_moisture = value
-    elif metric == "battery":
-        state.battery_level = value
     else:
         logger.info("Unhandled metric type: %s", metric)
 

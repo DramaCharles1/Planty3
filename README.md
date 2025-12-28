@@ -30,7 +30,14 @@ Publish to topic example:
 
 ## Django
 
-**Super user**
-Username: root
-Email address: root@test.com
+**Super user**\
+Username: root\
+Email address: root@test.com\
 Password: password
+
+**Test**\
+Run tests for Django motherplant app
+
+***From Docker***\
+backend or mqtt_client service must run\
+`docker compose exec mqtt_client python manage.py test motherplant`

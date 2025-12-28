@@ -121,3 +121,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MQTT_BROKER_HOST = config('MQTT_BROKER_HOST')
+MQTT_BROKER_PORT = config('MQTT_BROKER_PORT', cast=int)
