@@ -41,3 +41,16 @@ Run tests for Django motherplant app
 ***From Docker***\
 backend or mqtt_client service must run\
 `docker compose exec mqtt_client python manage.py test motherplant`
+
+## Frontend
+
+**NVM**
+
+Install nvm:\
+`curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash`
+
+Install npm using nvm:\
+`nvm install <version>`
+
+Creata new React app using Vite:\
+`npm create vite@latest <app directory name> -- --template react`
