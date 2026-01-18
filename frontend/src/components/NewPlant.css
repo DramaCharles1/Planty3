@@ -1,0 +1,48 @@
+.newplant-container {
+  margin-left: 260px;
+  padding: 32px 0 0 0;
+}
+.newplant-title {
+  font-size: 40px;
+  font-weight: 400;
+  margin-bottom: 32px;
+}
+.newplant-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.newplant-label {
+  font-size: 20px;
+  width: 180px;
+  margin-right: 8px;
+}
+.newplant-input, .newplant-select {
+  background: #b0b3b6;
+  border: none;
+  font-size: 18px;
+  padding: 4px 12px;
+  margin-right: 16px;
+  min-width: 140px;
+}
+.newplant-btn {
+  background: #b0b3b6;
+  border: none;
+  font-size: 18px;
+  padding: 4px 12px;
+  margin-right: 16px;
+  cursor: pointer;
+}
+.newplant-features {
+  display: flex;
+  flex-direction: column;
+}
+.newplant-feature-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.save-btn {
+  margin-left: 188px;
+  margin-top: 12px;
+}
