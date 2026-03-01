@@ -85,6 +85,14 @@ Tips:
 - Tests live in `backend/motherplant/tests.py` and use `django.test.TestCase`.
 - Keep tests deterministic (timezone-aware datetimes; fixed timestamps).
 
+### Testing Conventions
+
+- New tests can be plain functions with `@pytest.mark.django_db` (for DB access) or
+  without (for pure unit tests like `parse_topic`).
+- Use `@pytest.mark.parametrize` for validation edge cases (reduces boilerplate vs. one
+  method per case).
+- Existing `django.test.TestCase` subclasses also work under pytest.
+
 ## Lint / Format
 
 No repo-wide lint/format/type-check tooling is configured yet (no `pyproject.toml`,
