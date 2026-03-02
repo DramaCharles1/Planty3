@@ -62,23 +62,27 @@ Open shell:
 
 ## Test Commands
 
-Test runner is Django's built-in test runner (no pytest config found).
+Test runner is pytest + pytest-django (replacing Django's built-in).
 
 Run all tests:
 
-- `docker compose exec backend python manage.py test`
+- make test
+
+Run coverage:
+
+- make coverage
 
 Run a single app's tests:
 
-- `docker compose exec backend python manage.py test motherplant`
+- docker compose exec backend pytest motherplant
 
 Run a single test class:
 
-- `docker compose exec backend python manage.py test motherplant.tests.MqttClientTests`
+- docker compose exec backend pytest motherplant/tests.py::MqttClientTests
 
 Run a single test method:
 
-- `docker compose exec backend python manage.py test motherplant.tests.MqttClientTests.test_parse_topic_valid`
+- docker compose exec backend pytest motherplant/tests.py::MqttClientTests::test_parse_topic_valid
 
 Tips:
 
@@ -95,17 +99,23 @@ Tips:
 
 ## Lint / Format
 
-No repo-wide lint/format/type-check tooling is configured yet (no `pyproject.toml`,
-`ruff.toml`, `setup.cfg`, etc.).
+Lint/format/type-check tooling is configured:
 
-Until such tooling is added, follow existing code style and keep diffs minimal.
+- Format: ruff
+- Lint: ruff
+- Imports: ruff
+- Types: (not configured yet)
+- Test: pytest + pytest-django
 
-If you introduce tooling, prefer (and commit) explicit config so agents/CI are stable:
+See Makefile targets below.
 
-- Format: `black`
-- Lint: `ruff`
-- Imports: `ruff` (or `isort` if preferred)
-- Types: `mypy` (requires configuration to be useful)
+## Makefile Targets
+
+- make lint: Run ruff check on backend/
+- make format: Run ruff format and check --fix on backend/
+- make test: Run pytest via docker compose
+- make coverage: Run pytest with coverage via docker compose
+- make quality: Run lint, test, and coverage in sequence
 
 ## Code Style Guidelines
 
@@ -113,10 +123,6 @@ If you introduce tooling, prefer (and commit) explicit config so agents/CI are s
 
 - Indentation: 4 spaces. Avoid tabs.
 - Keep lines reasonably short (~88-100 chars).
-- Use trailing commas in multiline literals/calls to keep diffs clean.
-
-Note: `backend/motherplant/tests.py` currently uses tab indentation; when editing the
-file, convert touched blocks to 4-space indentation (do not mix tabs + spaces).
 
 ### Imports
 
