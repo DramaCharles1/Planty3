@@ -26,58 +26,64 @@ Broker semantics to specify:
 
 **Phase 1: Telemetry Only**
 - Implement telemetry topic: `planty/plant/{plant_id}/telemetry/moisture`.
-- Update backend parser and subscriptions for this topic.
-- Update models: Limit `Telemetry.TELEMETRY_TYPES` to only `("moisture", "Soil moisture")`. Remove `last_temperature` field from `PlantState` model.
-- Remove temperature code: Delete `if metric == "temperature": state.last_temperature = value` from `on_message` in `mqtt_client.py`. Create/run migration to drop `last_temperature` column.
+- Update backend `parse_topic()` for new 5-part topic structure and subscriptions (`planty/plant/+/telemetry/+`).
+- Add explicit metric validation in the worker: reject unknown metrics before DB insert (do not rely on Django `choices=` which only validates in forms/serializers).
+- Migrations:
+  - Create initial migration to capture current schema.
+  - Create second migration to: drop `last_temperature` column, drop `battery_level` column, delete any existing temperature telemetry rows.
+- Update models:
+  - Limit `Telemetry.TELEMETRY_TYPES` to only `("moisture", "Soil moisture")`.
+  - Remove `last_temperature` field from `PlantState`.
+  - Remove `battery_level` field from `PlantState`.
+- Remove temperature code: Delete `if metric == "temperature": state.last_temperature = value` from `on_message` in `mqtt_client.py`.
+- Remove `online`/`last_seen` updates from telemetry handler (defer presence tracking to Phase 2).
 - Update tests: Change `valid_topic` to `"planty/plant/plant01/telemetry/moisture"` and adjust `parse_topic` tests for the new 5-part structure.
 - Update docs and examples:
   - `README.md`: Change mosquitto examples to publish/subscribe to `planty/plant/plant01/telemetry/moisture`.
   - `docs/current-flowchart.md`: Update flowchart to new topic path and remove unimplemented topics.
   - `AGENTS.md`: Update topic examples to new structure.
-- Ensure backend `on_message` only processes moisture (model choices enforce this).
+- Run `make quality` to verify all checks pass.
 - Cutover: Hard cutover for telemetry.
-- Verification: Publish moisture to new topic → DB stores Telemetry (type="moisture") and updates PlantState.last_moisture.
+- Verification: Publish moisture to new topic -> DB stores Telemetry (type="moisture") and updates PlantState.last_moisture. All quality checks pass.
 
 **Phase 2: Add Status/Presence**
 - Implement status topic: `planty/plant/{plant_id}/status`.
 - Update backend to handle status messages and LWT.
 - Update models: No change needed (use existing `PlantState.online`, `last_seen`).
+- Add `online`/`last_seen` updates driven by status messages (not telemetry).
 - Add device LWT and status publishing.
+- Update tests for status handling.
 - Update docs/flowchart for status.
+- Run `make quality` to verify.
 
 **Phase 3: Add Commands and Acks**
 - Implement command topics: `planty/plant/{plant_id}/command/{command}` and `/command/{command}/ack`.
 - Update backend subscriptions and handling for commands/acks.
-- Update models: Add `CommandLog` model for ack persistence.
+- Update models: Add `CommandLog` model for ack persistence (fields: plant FK, command str, cmd_id str, sent_at datetime, ack_at datetime, ok bool, error str, raw_payload json).
 - Add device command subscription and ack publishing.
+- Update tests for command/ack handling.
+- Update docs/flowchart for commands.
+- Run `make quality` to verify.
 
 **Phase 4: Add Events (optional)**
 - Implement event topic: `planty/plant/{plant_id}/event/{event_type}`.
 - Update backend to handle events.
-- Update models: Add `Event` model.
-
-**4) Data / Model Updates (if needed, per phase)**
-- Phase 1: Limit `Telemetry.TELEMETRY_TYPES` in `models.py` to only `("moisture", "Soil moisture")` (remove temperature for now; add back in later phases if needed).
-- Phase 3: Add `CommandLog` model for command ack persistence: fields like plant (FK), command (str), cmd_id (str), sent_at (datetime), ack_at (datetime), ok (bool), error (str), raw_payload (json).
-- Phase 4: If events added, add `Event` model: fields like plant (FK), event_type (str), value (float), timestamp (datetime).
-
-**5) Docs + Examples Update (per phase)**
-- Phase 1: Update `README.md` mosquitto examples to new telemetry topic.
-- Later phases: Update `docs/current-flowchart.md` as features are added.
-
-**6) Cutover Execution (coordinated deployment, per phase)**
+- Update models: Add `Event` model (fields: plant FK, event_type str, value float, timestamp datetime).
+- Update tests for event handling.
+- Update docs/flowchart for events.
+- Run `make quality` to verify.
+**Cutover Execution (coordinated deployment, per phase)**
 For each phase, perform hard cutover in a maintenance window:
 1. Deploy backend changes.
 2. Deploy device changes.
 3. Restart devices; verify new features.
 4. Clear any old retained messages if applicable.
 
-**7) Verification Checklist (per phase)**
-- Phase 1: `mosquitto_sub` on `planty/plant/+/telemetry/+` shows moisture data; DB updates `PlantState.last_moisture`.
-- Phase 2: Status retained; `online` toggles on disconnect.
-- Phase 3: Commands sent/received; acks logged.
-- Phase 4: Events published/handled.
+**Verification Checklist (per phase)**
+- Phase 1: `mosquitto_sub` on `planty/plant/+/telemetry/+` shows moisture data; DB updates `PlantState.last_moisture`; `make quality` passes.
+- Phase 2: Status retained; `online` toggles on disconnect; `make quality` passes.
+- Phase 3: Commands sent/received; acks logged; `make quality` passes.
+- Phase 4: Events published/handled; `make quality` passes.
 
-**8) Rollback Plan (per phase)**
-- Rollback to previous phase or old system by redeploying prior backend/device code.</content>
-<parameter name="filePath">/home/richard/source/repos/Planty3/topic_remake_plan.md
+**Rollback Plan (per phase)**
+- Rollback to previous phase or old system by redeploying prior backend/device code.
