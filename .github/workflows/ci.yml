@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    - name: Install ruff
+      run: pip install ruff
+    - name: Lint
+      run: ruff check backend/
+    - name: Build backend
+      run: docker compose build backend
+    - name: Start services
+      run: docker compose up -d postgres backend
+    - name: Run migrations
+      run: docker compose exec backend python manage.py migrate
+    - name: Run tests with coverage
+      run: docker compose exec backend pytest --cov
