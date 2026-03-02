@@ -1,9 +1,11 @@
-
 import json
-from django.test import TestCase
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+from django.test import TestCase
+
 from motherplant.management.commands import mqtt_client
+
 
 class MqttClientTests(TestCase):
     def setUp(self):
@@ -11,7 +13,7 @@ class MqttClientTests(TestCase):
         self.invalid_topic = "invalid/plant01/telemetry/temperature"
         self.payload = {
             "value": 25.5,
-            "ts": int(datetime(2025, 12, 25, 12, 0, 0, tzinfo=timezone.utc).timestamp())
+            "ts": int(datetime(2025, 12, 25, 12, 0, 0, tzinfo=timezone.utc).timestamp()),
         }
 
     def test_parse_topic_valid(self):

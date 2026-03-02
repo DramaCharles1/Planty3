@@ -3,12 +3,10 @@ import logging
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
-
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from motherplant.models import Plant, PlantState, Telemetry
-
 
 # -------------------------------------------------
 # Logging
@@ -91,10 +89,7 @@ def on_message(client, userdata, msg):
             plant_id=plant_id,
         )
     except Plant.DoesNotExist:
-        logger.warning(
-            "Telemetry from unknown or inactive plant: %s",
-            plant_id
-        )
+        logger.warning("Telemetry from unknown or inactive plant: %s", plant_id)
         return
 
     # ---- Store telemetry history ----
@@ -119,12 +114,7 @@ def on_message(client, userdata, msg):
     state.online = True
     state.save()
 
-    logger.info(
-        "Updated %s: %s=%s",
-        plant_id,
-        metric,
-        value
-    )
+    logger.info("Updated %s: %s=%s", plant_id, metric, value)
 
 
 # -------------------------------------------------
