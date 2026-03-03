@@ -28,13 +28,13 @@ Broker semantics to specify:
 - Implement telemetry topic: `planty/plant/{plant_id}/telemetry/moisture`.
 - Update backend `parse_topic()` for new 5-part topic structure and subscriptions (`planty/plant/+/telemetry/+`).
 - Add explicit metric validation in the worker: reject unknown metrics before DB insert (do not rely on Django `choices=` which only validates in forms/serializers).
-- Migrations:
-  - Create initial migration to capture current schema.
-  - Create second migration to: drop `last_temperature` column, drop `battery_level` column, delete any existing temperature telemetry rows.
-- Update models:
-  - Limit `Telemetry.TELEMETRY_TYPES` to only `("moisture", "Soil moisture")`.
+- Update models first (before generating migrations):
+  - Limit `Telemetry.TELEMETRY_TYPES` to only `("moisture", "Moisture")`.
   - Remove `last_temperature` field from `PlantState`.
   - Remove `battery_level` field from `PlantState`.
+- Migrations (generate after model changes are complete):
+  - Run `makemigrations` to produce a single migration that drops `last_temperature`, drops `battery_level`, and updates `choices`. Since these columns were never added via migration, the generated migration will be a clean schema-only change.
+  - Add a `RunPython` data migration step (in the same or separate migration) to delete any existing temperature telemetry rows.
 - Remove temperature code: Delete `if metric == "temperature": state.last_temperature = value` from `on_message` in `mqtt_client.py`.
 - Remove `online`/`last_seen` updates from telemetry handler (defer presence tracking to Phase 2).
 - Update tests: Change `valid_topic` to `"planty/plant/plant01/telemetry/moisture"` and adjust `parse_topic` tests for the new 5-part structure.
