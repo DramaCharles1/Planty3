@@ -17,17 +17,18 @@ flowchart LR
   end
 
   subgraph Django_App["Django (motherplant app)"]
-    PARSE["parse_topic()\nplanty/<plant_id>/telemetry/<metric>"]
+    PARSE["parse_topic()\nplanty/plant/<plant_id>/telemetry/<metric>"]
     DECODE["json.loads(payload)\nexpects {value, ts}"]
+    VALIDATE["metric validation\nallowed: moisture only"]
     LOOKUP["Plant.objects.get(plant_id)\n(if missing -> ignore)"]
     STORE["Telemetry.objects.create()\n(type=metric, value, timestamp)"]
-    SNAP["PlantState.get_or_create()\nupdate last_* + last_seen + online"]
+    SNAP["PlantState.get_or_create()\nupdate last_moisture"]
     ADMIN["Django Admin\nmanage Plants, view telemetry/state"]
   end
 
-  PLANT -->|"publish MQTT\nplanty/{plant_id}/telemetry/{metric}\n{value, ts}"| MQTT
-  WORKER -->|"subscribe\nplanty/+/telemetry/+"| MQTT
-  WORKER --> PARSE --> DECODE --> LOOKUP
+  PLANT -->|"publish MQTT\nplanty/plant/{plant_id}/telemetry/moisture\n{value, ts}"| MQTT
+  WORKER -->|"subscribe\nplanty/plant/+/telemetry/+"| MQTT
+  WORKER --> PARSE --> DECODE --> VALIDATE --> LOOKUP
   LOOKUP -->|"known plant"| STORE --> PG
   LOOKUP -->|"known plant"| SNAP --> PG
 
@@ -37,9 +38,15 @@ flowchart LR
   ADMINER --> PG
 
   %% Not implemented yet (documented only)
-  CMD["Commands/config/events topics\n(e.g. planty/{id}/command/water)\nNOT implemented"]:::missing
+  STATUS["Status/presence\nplanty/plant/{id}/status\nNOT implemented"]:::missing
+  CMD["Commands\nplanty/plant/{id}/command/{cmd}\nNOT implemented"]:::missing
+  EVENTS["Events\nplanty/plant/{id}/event/{type}\nNOT implemented"]:::missing
+  BACKEND -.-> STATUS
   BACKEND -.-> CMD
+  BACKEND -.-> EVENTS
+  WORKER -.-> STATUS
   WORKER -.-> CMD
+  WORKER -.-> EVENTS
 
   classDef missing stroke-dasharray: 5 5,opacity:0.6;
 ```

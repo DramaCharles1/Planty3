@@ -20,17 +20,20 @@ logger = logging.getLogger(__name__)
 def parse_topic(topic: str):
     """
     Expected topic format:
-    planty/<plant_id>/telemetry/<metric>
+    planty/plant/<plant_id>/telemetry/<metric>
     """
     parts = topic.split("/")
 
-    if len(parts) != 4:
+    if len(parts) != 5:
         raise ValueError("Invalid topic format")
 
-    root, plant_id, category, metric = parts
+    root, entity, plant_id, category, metric = parts
 
     if root != "planty":
         raise ValueError("Invalid root topic")
+
+    if entity != "plant":
+        raise ValueError("Invalid entity type")
 
     if category != "telemetry":
         raise ValueError("Unsupported category")
@@ -44,7 +47,7 @@ def parse_topic(topic: str):
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         logger.info("Connected to MQTT broker")
-        client.subscribe("planty/+/telemetry/+")
+        client.subscribe("planty/plant/+/telemetry/+")
     else:
         logger.error("MQTT connection failed with code %s", rc)
 
@@ -57,6 +60,12 @@ def on_message(client, userdata, msg):
         plant_id, metric = parse_topic(msg.topic)
     except ValueError as e:
         logger.warning("Ignoring topic %s: %s", msg.topic, e)
+        return
+
+    # ---- Validate metric ----
+    allowed_metrics = {"moisture"}
+    if metric not in allowed_metrics:
+        logger.warning("Rejecting unknown metric %s from %s", metric, msg.topic)
         return
 
     # ---- Parse payload ----
@@ -103,15 +112,9 @@ def on_message(client, userdata, msg):
     # ---- Update plant snapshot ----
     state, _ = PlantState.objects.get_or_create(plant=plant)
 
-    if metric == "temperature":
-        state.last_temperature = value
-    elif metric == "moisture":
+    if metric == "moisture":
         state.last_moisture = value
-    else:
-        logger.info("Unhandled metric type: %s", metric)
 
-    state.last_seen = datetime.now(timezone.utc)
-    state.online = True
     state.save()
 
     logger.info("Updated %s: %s=%s", plant_id, metric, value)
