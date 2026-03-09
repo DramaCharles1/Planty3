@@ -11,13 +11,27 @@ Start Docker service:\
 
 **Mosquitto**
 
-Subscribe to topic example
+Subscribe to telemetry topic example:
 
 `mosquitto_sub -h localhost -p 1883 -t "planty/plant/plant01/telemetry/moisture"`
 
-Publish to topic example:
+Publish telemetry to topic example:
 
 `mosquitto_pub -h localhost -p 1883 -t "planty/plant/plant01/telemetry/moisture" -m '{"value":45.2,"ts":1766644800}'`
+
+Subscribe to status topic example:
+
+`mosquitto_sub -h localhost -p 1883 -t "planty/plant/plant01/status"`
+
+Publish status (online) to topic example:
+
+`mosquitto_pub -h localhost -p 1883 -t "planty/plant/plant01/status" -m '{"online":true,"ts":1766644800}' -r`
+
+Publish status (offline) to topic example:
+
+`mosquitto_pub -h localhost -p 1883 -t "planty/plant/plant01/status" -m '{"online":false,"ts":1766644800}' -r`
+
+**Note:** The `-r` flag sets the message as retained, which is recommended for status messages.
 
 ## Database
 

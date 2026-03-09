@@ -176,27 +176,29 @@ Prefer explicit imports over `import *`.
 
 Topic shape (see `mqtt/schemas/topics` and code):
 
-- `planty/plant/{plant_id}/telemetry/{metric}`
+- Telemetry: `planty/plant/{plant_id}/telemetry/{metric}`
+- Status: `planty/plant/{plant_id}/status`
 
 Current ingest worker:
 
 - `backend/motherplant/management/commands/mqtt_client.py`
-- subscribes to `planty/plant/+/telemetry/+`
+- subscribes to `planty/plant/+/telemetry/+` and `planty/plant/+/status`
 
 Payload:
 
-- expects JSON with `value` (number) and `ts` (unix seconds)
+- Telemetry: expects JSON with `value` (number) and `ts` (unix seconds)
+- Status: expects JSON with `online` (boolean) and `ts` (unix seconds)
 
-Current implementation (Phase 1):
+Current implementation (Phase 2):
 
-- Only `moisture` metric is supported.
-- Unknown metrics are rejected before DB insert.
-- Online/last_seen tracking deferred to Phase 2 (status messages).
+- Telemetry: Only `moisture` metric is supported. Unknown metrics are rejected before DB insert.
+- Status: Online/offline presence tracking implemented. Updates `PlantState.online` and `PlantState.last_seen`.
+- Commands and events deferred to Phase 3 and Phase 4.
 
 When extending metrics:
 
 - Update `Telemetry.TELEMETRY_TYPES` and any `PlantState.last_*` snapshot fields.
-- Update the allowed_metrics set in `mqtt_client.py` on_message().
+- Update the allowed_metrics set in `mqtt_client.py` handle_telemetry().
 
 ## Repo-Specific Notes / Guardrails
 
