@@ -20,8 +20,6 @@ class PlantState(models.Model):
     last_seen = models.DateTimeField(null=True, blank=True)
 
     last_moisture = models.FloatField(null=True, blank=True)
-    last_temperature = models.FloatField(null=True, blank=True)
-    battery_level = models.FloatField(null=True, blank=True)  # remove and migrate
 
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -30,10 +28,7 @@ class PlantState(models.Model):
 
 
 class Telemetry(models.Model):
-    TELEMETRY_TYPES = (
-        ("moisture", "Soil moisture"),
-        ("temperature", "Temperature"),
-    )
+    TELEMETRY_TYPES = (("moisture", "Moisture"),)
 
     plant = models.ForeignKey(Plant, on_delete=models.CASCADE, related_name="telemetry")
 

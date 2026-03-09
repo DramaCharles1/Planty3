@@ -13,11 +13,11 @@ Start Docker service:\
 
 Subscribe to topic example
 
-`mosquitto_sub -h localhost -p 1883 -t "planty/plant01/telemetry/temperature"`
+`mosquitto_sub -h localhost -p 1883 -t "planty/plant/plant01/telemetry/moisture"`
 
 Publish to topic example:
 
-`mosquitto_pub -h localhost -p 1883 -t "planty/plant01/telemetry/temperature" -m '{"value":30.5,"unit":"C","ts":1766644800}'`
+`mosquitto_pub -h localhost -p 1883 -t "planty/plant/plant01/telemetry/moisture" -m '{"value":45.2,"ts":1766644800}'`
 
 ## Database
 
