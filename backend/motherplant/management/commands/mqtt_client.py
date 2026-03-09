@@ -19,15 +19,18 @@ logger = logging.getLogger(__name__)
 # -------------------------------------------------
 def parse_topic(topic: str):
     """
-    Expected topic format:
-    planty/plant/<plant_id>/telemetry/<metric>
+    Expected topic formats:
+    - planty/plant/<plant_id>/telemetry/<metric>
+    - planty/plant/<plant_id>/status
+
+    Returns: (plant_id, category, metric_or_none)
     """
     parts = topic.split("/")
 
-    if len(parts) != 5:
+    if len(parts) < 4 or len(parts) > 5:
         raise ValueError("Invalid topic format")
 
-    root, entity, plant_id, category, metric = parts
+    root, entity, plant_id, category = parts[:4]
 
     if root != "planty":
         raise ValueError("Invalid root topic")
@@ -35,10 +38,17 @@ def parse_topic(topic: str):
     if entity != "plant":
         raise ValueError("Invalid entity type")
 
-    if category != "telemetry":
-        raise ValueError("Unsupported category")
-
-    return plant_id, metric
+    if category == "telemetry":
+        if len(parts) != 5:
+            raise ValueError("Telemetry topic requires metric")
+        metric = parts[4]
+        return plant_id, category, metric
+    elif category == "status":
+        if len(parts) != 4:
+            raise ValueError("Status topic must be 4 parts")
+        return plant_id, category, None
+    else:
+        raise ValueError(f"Unsupported category: {category}")
 
 
 # -------------------------------------------------
@@ -48,6 +58,8 @@ def on_connect(client, userdata, flags, rc):
     if rc == 0:
         logger.info("Connected to MQTT broker")
         client.subscribe("planty/plant/+/telemetry/+")
+        client.subscribe("planty/plant/+/status")
+        logger.info("Subscribed to telemetry and status topics")
     else:
         logger.error("MQTT connection failed with code %s", rc)
 
@@ -57,15 +69,9 @@ def on_message(client, userdata, msg):
 
     # ---- Parse topic ----
     try:
-        plant_id, metric = parse_topic(msg.topic)
+        plant_id, category, metric = parse_topic(msg.topic)
     except ValueError as e:
         logger.warning("Ignoring topic %s: %s", msg.topic, e)
-        return
-
-    # ---- Validate metric ----
-    allowed_metrics = {"moisture"}
-    if metric not in allowed_metrics:
-        logger.warning("Rejecting unknown metric %s from %s", metric, msg.topic)
         return
 
     # ---- Parse payload ----
@@ -75,11 +81,35 @@ def on_message(client, userdata, msg):
         logger.warning("Invalid JSON from %s", msg.topic)
         return
 
+    # ---- Plant lookup (must already exist) ----
+    try:
+        plant = Plant.objects.get(plant_id=plant_id)
+    except Plant.DoesNotExist:
+        logger.warning("Message from unknown plant: %s", plant_id)
+        return
+
+    # ---- Handle by category ----
+    if category == "telemetry":
+        handle_telemetry(plant, metric, payload)
+    elif category == "status":
+        handle_status(plant, payload)
+    else:
+        logger.warning("Unsupported category: %s", category)
+
+
+def handle_telemetry(plant, metric, payload):
+    """Handle telemetry messages."""
+    # ---- Validate metric ----
+    allowed_metrics = {"moisture"}
+    if metric not in allowed_metrics:
+        logger.warning("Rejecting unknown metric %s for %s", metric, plant.plant_id)
+        return
+
     value = payload.get("value")
     ts = payload.get("ts")
 
     if value is None or ts is None:
-        logger.warning("Missing fields in payload: %s", payload)
+        logger.warning("Missing fields in telemetry payload: %s", payload)
         return
 
     if not isinstance(value, (int, float)):
@@ -90,15 +120,6 @@ def on_message(client, userdata, msg):
         timestamp = datetime.fromtimestamp(ts, tz=timezone.utc)
     except Exception:
         logger.warning("Invalid timestamp: %s", ts)
-        return
-
-    # ---- Plant lookup (must already exist) ----
-    try:
-        plant = Plant.objects.get(
-            plant_id=plant_id,
-        )
-    except Plant.DoesNotExist:
-        logger.warning("Telemetry from unknown or inactive plant: %s", plant_id)
         return
 
     # ---- Store telemetry history ----
@@ -117,7 +138,36 @@ def on_message(client, userdata, msg):
 
     state.save()
 
-    logger.info("Updated %s: %s=%s", plant_id, metric, value)
+    logger.info("Updated %s: %s=%s", plant.plant_id, metric, value)
+
+
+def handle_status(plant, payload):
+    """Handle status messages (online/offline presence)."""
+    online = payload.get("online")
+    ts = payload.get("ts")
+
+    if online is None or ts is None:
+        logger.warning("Missing fields in status payload: %s", payload)
+        return
+
+    if not isinstance(online, bool):
+        logger.warning("Invalid online type: %s", online)
+        return
+
+    try:
+        timestamp = datetime.fromtimestamp(ts, tz=timezone.utc)
+    except Exception:
+        logger.warning("Invalid timestamp: %s", ts)
+        return
+
+    # ---- Update plant state ----
+    state, _ = PlantState.objects.get_or_create(plant=plant)
+    state.online = online
+    state.last_seen = timestamp
+    state.save()
+
+    status_str = "online" if online else "offline"
+    logger.info("Plant %s is now %s (last_seen=%s)", plant.plant_id, status_str, timestamp)
 
 
 # -------------------------------------------------
