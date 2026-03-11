@@ -200,6 +200,30 @@ When extending metrics:
 - Update `Telemetry.TELEMETRY_TYPES` and any `PlantState.last_*` snapshot fields.
 - Update the allowed_metrics set in `mqtt_client.py` handle_telemetry().
 
+## GitHub MCP Integration
+
+The project has the GitHub MCP server configured for interacting with GitHub's API.
+
+When to use the `github` MCP tools:
+
+- Checking open issues, pull requests, or commits
+- Retrieving repository information
+- Looking up branch status or history
+- Any task requiring GitHub API access
+
+Important notes:
+
+- Only use GitHub MCP tools when explicitly asked or when GitHub data is needed
+- The GitHub MCP server adds significant tokens to context; use sparingly
+- Prefer using the `gh` CLI tool (via Bash) for simple GitHub operations
+- Use GitHub MCP when you need structured API responses or complex queries
+
+Example usage patterns:
+
+- "Use the github tool to list open issues"
+- "Check the latest commits using github"
+- "Use github to show PR status"
+
 ## Repo-Specific Notes / Guardrails
 
 - Cursor rules: none found (`.cursor/rules/` / `.cursorrules` absent).
