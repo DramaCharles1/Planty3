@@ -22,8 +22,10 @@ jobs:
     - name: Build backend
       run: docker compose build backend
     - name: Start services
-      run: docker compose up -d postgres backend
+      run: docker compose up -d --wait postgres backend
+    - name: Verify services are healthy
+      run: docker compose ps
     - name: Run migrations
-      run: docker compose exec backend python manage.py migrate
+      run: docker compose exec -T backend python manage.py migrate
     - name: Run tests with coverage
-      run: docker compose exec backend pytest --cov
+      run: docker compose exec -T backend pytest --cov
