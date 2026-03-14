@@ -17,8 +17,10 @@ jobs:
         python-version: '3.12'
     - name: Install ruff
       run: pip install ruff
-    - name: Lint
+    - name: Lint backend
       run: ruff check backend/
+    - name: Lint simulator
+      run: ruff check mqtt/simulator/
     - name: Build backend
       run: docker compose build backend
     - name: Start services
@@ -27,5 +29,9 @@ jobs:
       run: docker compose ps
     - name: Run migrations
       run: docker compose exec -T backend python manage.py migrate
-    - name: Run tests with coverage
+    - name: Run backend tests with coverage
       run: docker compose exec -T backend pytest --cov
+    - name: Build simulator test image
+      run: cd mqtt/simulator && docker build -t planty3-simulator-test -f Dockerfile .
+    - name: Run simulator tests with coverage
+      run: docker run --rm -v $(pwd)/mqtt/simulator:/app planty3-simulator-test pytest --cov=plant_simulator --cov-report=term-missing
