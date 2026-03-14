@@ -6,13 +6,13 @@ Repository: Dockerized Django + Postgres + MQTT (Mosquitto).
 
 ## Quick Orientation
 
-- `docker-compose.yaml`: runs `mqtt`, `postgres`, `adminer`, `backend`, `mqtt_client`
+- `docker-compose.yaml`: runs `mqtt`, `postgres`, `adminer`, `backend`, `mqtt_client`, `simulator`
 - `.env`: dev defaults used by compose (DB/MQTT). Treat as non-secret in this repo.
 - `backend/`: Django project
   - `backend/manage.py`
   - `backend/planty/`: settings/urls
   - `backend/motherplant/`: models + MQTT ingest management command + tests
-- `mqtt/`: mosquitto config + topic/schema documentation + local MQTT test client
+- `mqtt/`: mosquitto config + topic/schema documentation + local MQTT test client + plant simulator
 
 ## Build / Run (Docker)
 
@@ -37,6 +37,10 @@ Start MQTT ingestion worker:
 
 - `docker compose up -d mqtt_client`
 
+Start plant simulator:
+
+- `docker compose up -d simulator`
+
 Build images:
 
 - `docker compose build`
@@ -45,6 +49,7 @@ Logs:
 
 - `docker compose logs -f backend`
 - `docker compose logs -f mqtt_client`
+- `docker compose logs -f simulator`
 
 ## Django Management Commands (Docker)
 
@@ -211,6 +216,44 @@ When extending metrics:
 
 - Update `Telemetry.TELEMETRY_TYPES` and any `PlantState.last_*` snapshot fields.
 - Update the allowed_metrics set in `mqtt_client.py` handle_telemetry().
+
+## Plant Simulator
+
+A simulated plant device for end-to-end testing.
+
+Location: `mqtt/simulator/plant_simulator.py`
+
+Start simulator:
+
+- `docker compose up -d simulator`
+
+Logs:
+
+- `docker compose logs -f simulator`
+
+**Prerequisites:**
+
+- The Plant record must exist in Django. Use Django Admin to create a Plant with `plant_id` matching `SIM_PLANT_ID` (default: `sim_plant_01`).
+
+**Behavior:**
+
+- Publishes moisture telemetry every `TELEMETRY_INTERVAL` seconds (default: 10s)
+- Publishes online status on connect and every `STATUS_HEARTBEAT_INTERVAL` seconds (default: 60s)
+- Subscribes to commands on `planty/plant/{plant_id}/command/+`
+- Acknowledges all commands with `ok: true` (no simulated failures)
+
+**Configuration:**
+
+See `mqtt/simulator/.env.example` for available environment variables.
+
+**Testing end-to-end:**
+
+1. Start services: `docker compose up -d mqtt postgres backend mqtt_client simulator`
+2. Create a Plant in Django Admin with `plant_id = "sim_plant_01"`
+3. Watch simulator logs: `docker compose logs -f simulator`
+4. Watch mqtt_client logs: `docker compose logs -f mqtt_client`
+5. Check Adminer or Django Admin to see `Telemetry` and `PlantState` records
+6. Send a command via Django shell or future API (Phase 4)
 
 ## GitHub MCP Integration
 

@@ -77,6 +77,26 @@ services:
     env_file:
       - .env
 
+  simulator:
+    build:
+      context: ./mqtt/simulator
+      dockerfile: Dockerfile
+    container_name: planty3-simulator
+    environment:
+      PLANT_ID: ${SIM_PLANT_ID:-sim_plant_01}
+      MQTT_BROKER_HOST: mqtt
+      MQTT_BROKER_PORT: 1883
+      TELEMETRY_INTERVAL: ${SIM_TELEMETRY_INTERVAL:-10}
+      STATUS_HEARTBEAT_INTERVAL: ${SIM_STATUS_INTERVAL:-60}
+      MOISTURE_MIN: ${SIM_MOISTURE_MIN:-20.0}
+      MOISTURE_MAX: ${SIM_MOISTURE_MAX:-80.0}
+      MOISTURE_PATTERN: ${SIM_MOISTURE_PATTERN:-random}
+      LOG_LEVEL: ${SIM_LOG_LEVEL:-INFO}
+    depends_on:
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   mosquitto_data:
 
