@@ -33,6 +33,24 @@ Publish status (offline) to topic example:
 
 **Note:** The `-r` flag sets the message as retained, which is recommended for status messages.
 
+Subscribe to command topic example:
+
+`mosquitto_sub -h localhost -p 1883 -t "planty/plant/plant01/command/+"`
+
+Publish command to topic example:
+
+`mosquitto_pub -h localhost -p 1883 -t "planty/plant/plant01/command/water" -m '{"cmd_id":"test-123","ts":1766644800,"duration":30}' -q 1`
+
+Subscribe to command ack topic example:
+
+`mosquitto_sub -h localhost -p 1883 -t "planty/plant/plant01/command/+/ack"`
+
+Publish command ack to topic example:
+
+`mosquitto_pub -h localhost -p 1883 -t "planty/plant/plant01/command/water/ack" -m '{"cmd_id":"test-123","ts":1766644800,"ok":true,"error":""}'`
+
+**Note:** Commands use QoS 1 (`-q 1` flag) for reliable delivery.
+
 ## Database
 
 **Postgre**

@@ -17,23 +17,30 @@ flowchart LR
   end
 
   subgraph Django_App["Django (motherplant app)"]
-    PARSE["parse_topic()\nplanty/plant/<plant_id>/telemetry/<metric>\nplanty/plant/<plant_id>/status"]
-    DECODE["json.loads(payload)\ntelemetry: {value, ts}\nstatus: {online, ts}"]
+    PARSE["parse_topic()\nplanty/plant/<plant_id>/telemetry/<metric>\nplanty/plant/<plant_id>/status\nplanty/plant/<plant_id>/command/<command>\nplanty/plant/<plant_id>/command/<command>/ack"]
+    DECODE["json.loads(payload)\ntelemetry: {value, ts}\nstatus: {online, ts}\ncommand: {cmd_id, ts, ...args}\nack: {cmd_id, ts, ok, error}"]
     VALIDATE["metric validation\nallowed: moisture only"]
     LOOKUP["Plant.objects.get(plant_id)\n(if missing -> ignore)"]
     STORE_TEL["Telemetry.objects.create()\n(type=metric, value, timestamp)"]
     SNAP["PlantState.get_or_create()\ntelemetry: update last_moisture\nstatus: update online, last_seen"]
-    ADMIN["Django Admin\nmanage Plants, view telemetry/state"]
+    STORE_CMD["CommandLog.objects.create()\n(plant, command, cmd_id, sent_at, raw_payload)"]
+    UPDATE_ACK["CommandLog.objects.get(cmd_id)\nupdate: ack_at, ok, error"]
+    ADMIN["Django Admin\nmanage Plants, view telemetry/state/commands"]
   end
 
   PLANT -->|"publish MQTT\nplanty/plant/{plant_id}/telemetry/moisture\n{value, ts}"| MQTT
   PLANT -->|"publish MQTT\nplanty/plant/{plant_id}/status\n{online, ts}"| MQTT
-  WORKER -->|"subscribe\nplanty/plant/+/telemetry/+\nplanty/plant/+/status"| MQTT
+  PLANT -->|"publish MQTT\nplanty/plant/{plant_id}/command/{cmd}/ack\n{cmd_id, ts, ok, error}"| MQTT
+  PLANT -->|"subscribe\nplanty/plant/{plant_id}/command/+"| MQTT
+  WORKER -->|"subscribe\nplanty/plant/+/telemetry/+\nplanty/plant/+/status\nplanty/plant/+/command/+/ack"| MQTT
+  BACKEND -->|"publish commands via\npublish_command() helper"| MQTT
   WORKER --> PARSE --> DECODE
   DECODE -->|"telemetry"| VALIDATE --> LOOKUP
   DECODE -->|"status"| LOOKUP
+  DECODE -->|"command ack"| LOOKUP --> UPDATE_ACK --> PG
   LOOKUP -->|"known plant + telemetry"| STORE_TEL --> PG
   LOOKUP -->|"known plant"| SNAP --> PG
+  STORE_CMD --> PG
 
   BACKEND --> PG
   ADMIN --> BACKEND
@@ -41,11 +48,8 @@ flowchart LR
   ADMINER --> PG
 
   %% Not implemented yet (documented only)
-  CMD["Commands\nplanty/plant/{id}/command/{cmd}\nNOT implemented"]:::missing
   EVENTS["Events\nplanty/plant/{id}/event/{type}\nNOT implemented"]:::missing
-  BACKEND -.-> CMD
   BACKEND -.-> EVENTS
-  WORKER -.-> CMD
   WORKER -.-> EVENTS
 
   classDef missing stroke-dasharray: 5 5,opacity:0.6;
