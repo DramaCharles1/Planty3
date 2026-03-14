@@ -48,3 +48,42 @@ class Telemetry(models.Model):
 
     def __str__(self):
         return f"{self.plant.plant_id} {self.type}={self.value}"
+
+
+class CommandLog(models.Model):
+    """
+    Tracks commands sent to devices and their acknowledgments.
+    """
+
+    plant = models.ForeignKey(Plant, on_delete=models.CASCADE, related_name="commands")
+
+    command = models.CharField(max_length=64, help_text="Command name (e.g., water, calibrate)")
+
+    cmd_id = models.CharField(max_length=128, help_text="Unique command ID (UUID or int)")
+
+    sent_at = models.DateTimeField(help_text="When command was sent")
+
+    ack_at = models.DateTimeField(null=True, blank=True, help_text="When ack was received")
+
+    ok = models.BooleanField(null=True, blank=True, help_text="Ack success status")
+
+    error = models.TextField(blank=True, help_text="Error message from ack if failed")
+
+    raw_payload = models.JSONField(
+        null=True, blank=True, help_text="Raw command payload for debugging"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["plant", "cmd_id"]),
+            models.Index(fields=["plant", "sent_at"]),
+        ]
+        ordering = ["-sent_at"]
+
+    def __str__(self):
+        status = "pending"
+        if self.ack_at:
+            status = "ok" if self.ok else "error"
+        return f"{self.plant.plant_id} {self.command} [{status}]"

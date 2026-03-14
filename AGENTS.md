@@ -178,22 +178,34 @@ Topic shape (see `mqtt/schemas/topics` and code):
 
 - Telemetry: `planty/plant/{plant_id}/telemetry/{metric}`
 - Status: `planty/plant/{plant_id}/status`
+- Commands: `planty/plant/{plant_id}/command/{command}`
+- Command acks: `planty/plant/{plant_id}/command/{command}/ack`
 
 Current ingest worker:
 
 - `backend/motherplant/management/commands/mqtt_client.py`
-- subscribes to `planty/plant/+/telemetry/+` and `planty/plant/+/status`
+- subscribes to `planty/plant/+/telemetry/+`, `planty/plant/+/status`, and `planty/plant/+/command/+/ack`
 
 Payload:
 
 - Telemetry: expects JSON with `value` (number) and `ts` (unix seconds)
 - Status: expects JSON with `online` (boolean) and `ts` (unix seconds)
+- Command: expects JSON with `cmd_id` (string), `ts` (unix seconds), and command-specific args
+- Command ack: expects JSON with `cmd_id` (string), `ts` (unix seconds), `ok` (boolean), and `error` (string)
 
-Current implementation (Phase 2):
+Current implementation (Phase 3):
 
 - Telemetry: Only `moisture` metric is supported. Unknown metrics are rejected before DB insert.
 - Status: Online/offline presence tracking implemented. Updates `PlantState.online` and `PlantState.last_seen`.
-- Commands and events deferred to Phase 3 and Phase 4.
+- Commands: Command publishing and acknowledgment tracking implemented. `CommandLog` model tracks commands sent and their acks.
+- Events deferred to Phase 4.
+
+Command usage:
+
+- Use `publish_command(client, plant, command, cmd_id, **kwargs)` helper to send commands and log them.
+- Commands are published with QoS 1 for reliable delivery.
+- Devices publish acks to `planty/plant/{plant_id}/command/{command}/ack`.
+- Acks update the corresponding `CommandLog` entry with `ack_at`, `ok`, and `error` fields.
 
 When extending metrics:
 
