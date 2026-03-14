@@ -68,6 +68,62 @@ test-all: test test-simulator
 **GitHub Actions integration:**
 Tests will run in the quality pipeline alongside existing backend tests.
 
+## Code Quality and Formatting
+
+The simulator should follow the same linting and formatting standards as the backend.
+
+### Linting and Formatting Tools
+
+The simulator will use **ruff** for both linting and formatting (same as backend).
+
+Add to `mqtt/simulator/requirements.txt`:
+```
+ruff>=0.1.0
+```
+
+### Running Lint and Format
+
+**Lint simulator code:**
+```bash
+cd mqtt/simulator
+ruff check .
+```
+
+**Format simulator code:**
+```bash
+cd mqtt/simulator
+ruff format .
+ruff check --fix .
+```
+
+### Makefile Integration
+
+Update the Makefile to include simulator in lint and format targets:
+
+```makefile
+lint:
+	ruff check backend/
+	ruff check mqtt/simulator/
+
+format:
+	ruff format backend/
+	ruff check --fix backend/
+	ruff format mqtt/simulator/
+	ruff check --fix mqtt/simulator/
+
+test:
+	docker compose exec backend pytest
+	cd mqtt/simulator && pytest -v
+
+coverage:
+	docker compose exec backend pytest --cov=motherplant --cov-report=term-missing
+	cd mqtt/simulator && pytest -v --cov=plant_simulator --cov-report=term-missing
+
+quality: lint test coverage
+```
+
+This ensures the entire codebase (backend + simulator) follows consistent code quality standards.
+
 ## Test Coverage Plan
 
 ### 1. MoistureSensor Tests
@@ -585,6 +641,14 @@ jobs:
         with:
           python-version: '3.12'
       
+      # Install ruff for linting/formatting
+      - name: Install ruff
+        run: pip install ruff
+      
+      # Lint and format check (both backend and simulator)
+      - name: Run linter
+        run: make lint
+      
       # Backend tests (existing)
       - name: Run backend tests
         run: |
@@ -601,10 +665,6 @@ jobs:
         run: |
           cd mqtt/simulator
           pytest -v --cov=plant_simulator --cov-report=term-missing
-      
-      # Lint (existing)
-      - name: Run linter
-        run: make lint
 ```
 
 ## Success Criteria
