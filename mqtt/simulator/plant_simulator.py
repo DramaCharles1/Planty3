@@ -18,6 +18,7 @@ import random
 import signal
 import sys
 import time
+from typing import Optional
 
 import paho.mqtt.client as mqtt
 
@@ -41,26 +42,44 @@ logging.basicConfig(
 logger = logging.getLogger("plant_simulator")
 
 
+def parse_command_topic(topic: str) -> Optional[str]:
+    """
+    Parse command from topic.
+
+    Expected format: planty/plant/{plant_id}/command/{command}
+    Returns command name or None if format doesn't match.
+    """
+    parts = topic.split("/")
+    if (
+        len(parts) >= 5
+        and parts[0] == "planty"
+        and parts[1] == "plant"
+        and parts[3] == "command"
+    ):
+        return parts[4]
+    return None
+
+
 class MoistureSensor:
     """Simulates moisture sensor readings."""
 
-    def __init__(self, min_value, max_value, pattern="random"):
+    def __init__(self, min_value: float, max_value: float, pattern: str = "random"):
         self.min_value = min_value
         self.max_value = max_value
         self.pattern = pattern
         self.start_time = time.time()
 
-    def get_reading(self):
+    def get_reading(self) -> float:
         """Generate a moisture reading based on configured pattern."""
         if self.pattern == "sine":
             return self._sine_mode()
         return self._random_mode()
 
-    def _random_mode(self):
+    def _random_mode(self) -> float:
         """Generate random moisture value in configured range."""
         return random.uniform(self.min_value, self.max_value)
 
-    def _sine_mode(self):
+    def _sine_mode(self) -> float:
         """Generate sinusoidal moisture value to simulate drying/watering cycles."""
         elapsed = time.time() - self.start_time
         # Complete cycle every 5 minutes (300 seconds)
@@ -129,10 +148,8 @@ class PlantSimulator:
             logger.info("Received message on topic %s: %s", topic, payload)
 
             # Parse topic to extract command name
-            # Topic format: planty/plant/{plant_id}/command/{command}
-            topic_parts = topic.split("/")
-            if len(topic_parts) >= 5 and topic_parts[3] == "command":
-                command = topic_parts[4]
+            command = parse_command_topic(topic)
+            if command:
                 cmd_id = payload.get("cmd_id")
 
                 if cmd_id:
@@ -149,7 +166,7 @@ class PlantSimulator:
         except Exception as e:
             logger.error("Error processing message: %s", e, exc_info=True)
 
-    def publish_telemetry(self):
+    def publish_telemetry(self) -> None:
         """Publish moisture telemetry reading."""
         moisture_value = self.moisture_sensor.get_reading()
         ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
@@ -165,7 +182,7 @@ class PlantSimulator:
         else:
             logger.error("Failed to publish telemetry, rc=%s", result.rc)
 
-    def publish_status(self, online=True):
+    def publish_status(self, online: bool = True) -> None:
         """Publish online/offline status."""
         ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
@@ -178,7 +195,7 @@ class PlantSimulator:
         else:
             logger.error("Failed to publish status, rc=%s", result.rc)
 
-    def publish_command_ack(self, command, cmd_id):
+    def publish_command_ack(self, command: str, cmd_id: str) -> None:
         """Publish command acknowledgment with ok: true."""
         ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
@@ -191,7 +208,7 @@ class PlantSimulator:
         else:
             logger.error("Failed to publish ack, rc=%s", result.rc)
 
-    def run(self):
+    def run(self) -> None:
         """Main run loop."""
         logger.info("Starting plant simulator...")
 
@@ -230,7 +247,7 @@ class PlantSimulator:
         finally:
             self.shutdown()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Graceful shutdown - publish offline status and disconnect."""
         logger.info("Shutting down plant simulator...")
         self.publish_status(online=False)
@@ -244,14 +261,14 @@ class PlantSimulator:
 simulator = None
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum: int, frame) -> None:
     """Handle SIGTERM and SIGINT for graceful shutdown."""
     logger.info("Received signal %s, shutting down...", signum)
     if simulator:
         simulator.shutdown_flag = True
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     global simulator
 
