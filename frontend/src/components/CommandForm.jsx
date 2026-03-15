@@ -1,28 +1,30 @@
-import React, { useState } from 'react';
+import { useState } from "react";
+import { sendCommand } from "../api/client";
 
 function CommandForm({ plantId, onCommandSent, onError }) {
-  const [command, setCommand] = useState('water');
+  const [command, setCommand] = useState("water");
   const [sending, setSending] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!command.trim()) {
-      onError('Please select a command');
+      onError("Please select a command");
       return;
     }
 
     setSending(true);
 
     try {
-      const { sendCommand } = await import('../api/client');
       const result = await sendCommand(plantId, command);
       onCommandSent(result);
       // Reset form
-      setCommand('water');
+      setCommand("water");
     } catch (err) {
-      console.error('Failed to send command:', err);
-      onError(err.response?.data?.error || 'Failed to send command. Please try again.');
+      console.error("Failed to send command:", err);
+      onError(
+        err.response?.data?.error || "Failed to send command. Please try again."
+      );
     } finally {
       setSending(false);
     }
@@ -42,7 +44,7 @@ function CommandForm({ plantId, onCommandSent, onError }) {
         </select>
       </div>
       <button type="submit" className="btn-primary" disabled={sending}>
-        {sending ? 'Sending...' : 'Send Command'}
+        {sending ? "Sending..." : "Send Command"}
       </button>
     </form>
   );

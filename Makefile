@@ -1,16 +1,19 @@
 lint:
 	ruff check backend/
 	ruff check mqtt/simulator/
+	npm --prefix frontend run lint
 
 format:
 	ruff format backend/
 	ruff check --fix backend/
 	ruff format mqtt/simulator/
 	ruff check --fix mqtt/simulator/
+	npm --prefix frontend run format
 
 test:
 	docker compose exec backend pytest
 	docker run --rm -v $(PWD)/mqtt/simulator:/app planty3-simulator-test pytest -v
+	docker compose exec frontend npm test
 
 coverage:
 	docker compose exec backend pytest --cov=motherplant --cov-report=term-missing

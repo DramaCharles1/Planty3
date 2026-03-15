@@ -1,14 +1,14 @@
-import axios from 'axios';
+import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const fetchPlants = async () => {
-  const response = await apiClient.get('/plants/');
+  const response = await apiClient.get("/plants/");
   return response.data;
 };
 
@@ -18,7 +18,9 @@ export const fetchPlantDetail = async (plantId) => {
 };
 
 export const fetchTelemetry = async (plantId, params = {}) => {
-  const response = await apiClient.get(`/plants/${plantId}/telemetry/`, { params });
+  const response = await apiClient.get(`/plants/${plantId}/telemetry/`, {
+    params,
+  });
   return response.data;
 };
 
@@ -36,7 +38,7 @@ export const sendCommand = async (plantId, command, args = {}) => {
 };
 
 export const createPlant = async (plantData) => {
-  const response = await apiClient.post('/plants/', plantData);
+  const response = await apiClient.post("/plants/", plantData);
   return response.data;
 };
 

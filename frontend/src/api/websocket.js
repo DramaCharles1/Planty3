@@ -2,7 +2,7 @@
  * WebSocket client for real-time telemetry updates
  */
 
-const WS_BASE_URL = 'ws://localhost:8000';
+const WS_BASE_URL = "ws://localhost:8000";
 
 /**
  * Create a WebSocket connection for a plant's telemetry updates
@@ -24,12 +24,12 @@ export function connectToPlantTelemetry(plantId, onMessage, onError, onClose) {
       const data = JSON.parse(event.data);
       onMessage(data);
     } catch (error) {
-      console.error('Failed to parse WebSocket message:', error);
+      console.error("Failed to parse WebSocket message:", error);
     }
   };
 
   ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
+    console.error("WebSocket error:", error);
     if (onError) {
       onError(error);
     }

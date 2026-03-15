@@ -15,16 +15,29 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
     - name: Install ruff
       run: pip install ruff
+    - name: Install frontend dependencies
+      run: npm ci
+      working-directory: frontend
     - name: Lint backend
       run: ruff check backend/
     - name: Lint simulator
       run: ruff check mqtt/simulator/
-    - name: Build backend
-      run: docker compose build backend
+    - name: Lint frontend
+      run: npm run lint
+      working-directory: frontend
+    - name: Check frontend formatting
+      run: npm run format:check
+      working-directory: frontend
+    - name: Build backend and frontend
+      run: docker compose build backend frontend
     - name: Start services
-      run: docker compose up -d --wait postgres backend
+      run: docker compose up -d --wait postgres backend frontend
     - name: Verify services are healthy
       run: docker compose ps
     - name: Run migrations
@@ -35,3 +48,5 @@ jobs:
       run: cd mqtt/simulator && docker build -t planty3-simulator-test -f Dockerfile .
     - name: Run simulator tests with coverage
       run: docker run --rm -v $(pwd)/mqtt/simulator:/app planty3-simulator-test pytest --cov=plant_simulator --cov-report=term-missing
+    - name: Run frontend tests
+      run: docker compose exec -T frontend npm test

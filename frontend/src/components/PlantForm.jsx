@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 /**
  * PlantForm component for creating or editing plants
@@ -8,9 +8,9 @@ import { useState, useEffect } from 'react';
  */
 function PlantForm({ plant = null, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    plant_id: '',
-    name: '',
-    location: '',
+    plant_id: "",
+    name: "",
+    location: "",
   });
   const [errors, setErrors] = useState({});
   const isEditMode = plant !== null;
@@ -18,22 +18,22 @@ function PlantForm({ plant = null, onSubmit, onCancel }) {
   useEffect(() => {
     if (plant) {
       setFormData({
-        plant_id: plant.plant_id || '',
-        name: plant.name || '',
-        location: plant.location || '',
+        plant_id: plant.plant_id || "",
+        name: plant.name || "",
+        location: plant.location || "",
       });
     }
   }, [plant]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
     // Clear error for this field
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
         [name]: null,
       }));
@@ -43,10 +43,10 @@ function PlantForm({ plant = null, onSubmit, onCancel }) {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.plant_id.trim()) {
-      newErrors.plant_id = 'Plant ID is required';
+      newErrors.plant_id = "Plant ID is required";
     }
     if (formData.plant_id.length > 64) {
-      newErrors.plant_id = 'Plant ID cannot exceed 64 characters';
+      newErrors.plant_id = "Plant ID cannot exceed 64 characters";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -73,10 +73,14 @@ function PlantForm({ plant = null, onSubmit, onCancel }) {
           onChange={handleChange}
           disabled={isEditMode}
           placeholder="e.g., plant_01"
-          className={errors.plant_id ? 'error' : ''}
+          className={errors.plant_id ? "error" : ""}
         />
-        {errors.plant_id && <span className="error-message">{errors.plant_id}</span>}
-        {isEditMode && <span className="help-text">Plant ID cannot be changed</span>}
+        {errors.plant_id && (
+          <span className="error-message">{errors.plant_id}</span>
+        )}
+        {isEditMode && (
+          <span className="help-text">Plant ID cannot be changed</span>
+        )}
       </div>
 
       <div className="form-group">
@@ -105,7 +109,7 @@ function PlantForm({ plant = null, onSubmit, onCancel }) {
 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary">
-          {isEditMode ? 'Update Plant' : 'Create Plant'}
+          {isEditMode ? "Update Plant" : "Create Plant"}
         </button>
         <button type="button" onClick={onCancel} className="btn btn-secondary">
           Cancel
