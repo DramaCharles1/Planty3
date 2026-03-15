@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { fetchPlants, createPlant } from '../api/client';
-import PlantCard from '../components/PlantCard';
-import PlantForm from '../components/PlantForm';
+import { useEffect, useState } from "react";
+import { fetchPlants, createPlant } from "../api/client";
+import PlantCard from "../components/PlantCard";
+import PlantForm from "../components/PlantForm";
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -22,8 +22,8 @@ function Dashboard() {
       setLastUpdate(new Date());
       setError(null);
     } catch (err) {
-      console.error('Failed to load plants:', err);
-      setError('Failed to load plants. Please try again later.');
+      console.error("Failed to load plants:", err);
+      setError("Failed to load plants. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -43,22 +43,22 @@ function Dashboard() {
     try {
       setFormError(null);
       await createPlant(plantData);
-      setFormSuccess('Plant added successfully!');
+      setFormSuccess("Plant added successfully!");
       setShowAddModal(false);
       // Reload plants
       await loadPlants();
       // Clear success message after 3 seconds
       setTimeout(() => setFormSuccess(null), 3000);
     } catch (err) {
-      console.error('Failed to create plant:', err);
+      console.error("Failed to create plant:", err);
       if (err.response?.data) {
         // Extract validation errors from API response
         const errors = Object.entries(err.response.data)
-          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-          .join('; ');
+          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+          .join("; ");
         setFormError(errors);
       } else {
-        setFormError('Failed to create plant. Please try again.');
+        setFormError("Failed to create plant. Please try again.");
       }
     }
   };
@@ -76,11 +76,14 @@ function Dashboard() {
       <div className="dashboard-header">
         <h2>All Plants</h2>
         <div>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary"
+          >
             Add Plant
           </button>
           {lastUpdate && (
-            <span className="last-update" style={{ marginLeft: '1rem' }}>
+            <span className="last-update" style={{ marginLeft: "1rem" }}>
               Last updated: {lastUpdate.toLocaleTimeString()}
             </span>
           )}
@@ -91,7 +94,8 @@ function Dashboard() {
 
       {plants.length === 0 ? (
         <div className="empty-state">
-          No plants found. Click "Add Plant" to create your first plant.
+          No plants found. Click &ldquo;Add Plant&rdquo; to create your first
+          plant.
         </div>
       ) : (
         <div className="plant-grid">

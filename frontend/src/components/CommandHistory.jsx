@@ -1,5 +1,3 @@
-import React from 'react';
-
 function CommandHistory({ commands }) {
   if (commands.length === 0) {
     return <div className="empty-state">No commands sent yet.</div>;
@@ -7,11 +5,13 @@ function CommandHistory({ commands }) {
 
   const getStatusBadge = (status) => {
     const statusClasses = {
-      acknowledged: 'status-badge success',
-      pending: 'status-badge warning',
-      failed: 'status-badge error',
+      acknowledged: "status-badge success",
+      pending: "status-badge warning",
+      failed: "status-badge error",
     };
-    return <span className={statusClasses[status] || 'status-badge'}>{status}</span>;
+    return (
+      <span className={statusClasses[status] || "status-badge"}>{status}</span>
+    );
   };
 
   return (
@@ -34,8 +34,10 @@ function CommandHistory({ commands }) {
               <td>{cmd.command}</td>
               <td>{new Date(cmd.sent_at).toLocaleString()}</td>
               <td>{getStatusBadge(cmd.status)}</td>
-              <td>{cmd.ack_at ? new Date(cmd.ack_at).toLocaleString() : '—'}</td>
-              <td className="error-cell">{cmd.error || '—'}</td>
+              <td>
+                {cmd.ack_at ? new Date(cmd.ack_at).toLocaleString() : "—"}
+              </td>
+              <td className="error-cell">{cmd.error || "—"}</td>
             </tr>
           ))}
         </tbody>

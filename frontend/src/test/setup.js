@@ -1,8 +1,8 @@
-import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import "@testing-library/jest-dom";
+import { vi } from "vitest";
 
 // Mock Chart.js to avoid canvas issues in tests
-vi.mock('chart.js', () => {
+vi.mock("chart.js", () => {
   const mockRegister = vi.fn();
   return {
     Chart: {
@@ -20,6 +20,6 @@ vi.mock('chart.js', () => {
   };
 });
 
-vi.mock('react-chartjs-2', () => ({
+vi.mock("react-chartjs-2", () => ({
   Line: () => null,
 }));

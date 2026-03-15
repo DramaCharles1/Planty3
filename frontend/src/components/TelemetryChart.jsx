@@ -1,4 +1,3 @@
-import React, { useEffect, useRef } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,9 +8,9 @@ import {
   Tooltip,
   Legend,
   TimeScale,
-} from 'chart.js';
-import 'chartjs-adapter-date-fns';
-import { Line } from 'react-chartjs-2';
+} from "chart.js";
+import "chartjs-adapter-date-fns";
+import { Line } from "react-chartjs-2";
 
 ChartJS.register(
   CategoryScale,
@@ -24,15 +23,15 @@ ChartJS.register(
   TimeScale
 );
 
-function TelemetryChart({ telemetryData, metricType = 'moisture' }) {
+function TelemetryChart({ telemetryData, metricType = "moisture" }) {
   const chartData = {
     labels: telemetryData.map((t) => new Date(t.timestamp)),
     datasets: [
       {
         label: `${metricType.charAt(0).toUpperCase() + metricType.slice(1)} (%)`,
         data: telemetryData.map((t) => t.value),
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        borderColor: "rgb(75, 192, 192)",
+        backgroundColor: "rgba(75, 192, 192, 0.2)",
         tension: 0.1,
       },
     ],
@@ -43,7 +42,7 @@ function TelemetryChart({ telemetryData, metricType = 'moisture' }) {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
+        position: "top",
       },
       title: {
         display: true,
@@ -52,23 +51,23 @@ function TelemetryChart({ telemetryData, metricType = 'moisture' }) {
     },
     scales: {
       x: {
-        type: 'time',
+        type: "time",
         time: {
-          unit: 'minute',
+          unit: "minute",
           displayFormats: {
-            minute: 'HH:mm',
-            hour: 'MMM d, HH:mm',
+            minute: "HH:mm",
+            hour: "MMM d, HH:mm",
           },
         },
         title: {
           display: true,
-          text: 'Time',
+          text: "Time",
         },
       },
       y: {
         title: {
           display: true,
-          text: 'Value (%)',
+          text: "Value (%)",
         },
         beginAtZero: true,
       },

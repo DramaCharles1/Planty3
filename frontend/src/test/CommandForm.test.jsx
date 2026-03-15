@@ -1,19 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import CommandForm from '../components/CommandForm';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import CommandForm from "../components/CommandForm";
+import * as apiClient from "../api/client";
 
-describe('CommandForm', () => {
+// Mock the API client
+vi.mock("../api/client");
+
+describe("CommandForm", () => {
   let mockOnCommandSent;
   let mockOnError;
+  let consoleErrorSpy;
 
   beforeEach(() => {
     mockOnCommandSent = vi.fn();
     mockOnError = vi.fn();
     vi.clearAllMocks();
+
+    // Suppress console.error from expected error scenarios and React warnings
+    consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation((msg, ...args) => {
+        if (typeof msg === "string") {
+          // Silence expected error logs and React act warnings
+          if (
+            msg.includes("Failed to send command") ||
+            msg.includes("Warning: An update to")
+          ) {
+            return;
+          }
+        }
+        // Log other errors normally
+        console.warn("Unexpected console.error:", msg, ...args);
+      });
   });
 
-  it('should render command form with default values', () => {
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("should render command form with default values", () => {
     render(
       <CommandForm
         plantId="test_plant_01"
@@ -22,12 +48,14 @@ describe('CommandForm', () => {
       />
     );
 
-    expect(screen.getByLabelText('Send Command:')).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toHaveValue('water');
-    expect(screen.getByRole('button', { name: /Send Command/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Send Command:")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveValue("water");
+    expect(
+      screen.getByRole("button", { name: /Send Command/i })
+    ).toBeInTheDocument();
   });
 
-  it('should have all command options in dropdown', () => {
+  it("should have all command options in dropdown", () => {
     render(
       <CommandForm
         plantId="test_plant_01"
@@ -36,26 +64,23 @@ describe('CommandForm', () => {
       />
     );
 
-    const select = screen.getByRole('combobox');
-    const options = select.querySelectorAll('option');
+    const select = screen.getByRole("combobox");
+    const options = select.querySelectorAll("option");
 
     expect(options).toHaveLength(1);
-    expect(options[0]).toHaveValue('water');
+    expect(options[0]).toHaveValue("water");
   });
 
-  it('should call onCommandSent on successful submission', async () => {
+  it("should call onCommandSent on successful submission", async () => {
     const user = userEvent.setup();
     const mockResponse = {
       id: 1,
-      command: 'water',
-      cmd_id: 'test-123',
-      status: 'pending',
+      command: "water",
+      cmd_id: "test-123",
+      status: "pending",
     };
 
-    // Mock the sendCommand import
-    vi.doMock('../api/client', () => ({
-      sendCommand: vi.fn().mockResolvedValue(mockResponse),
-    }));
+    apiClient.sendCommand.mockResolvedValue(mockResponse);
 
     render(
       <CommandForm
@@ -65,22 +90,25 @@ describe('CommandForm', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /Send Command/i });
+    const button = screen.getByRole("button", { name: /Send Command/i });
     await user.click(button);
 
     await waitFor(() => {
       expect(mockOnCommandSent).toHaveBeenCalledWith(mockResponse);
     });
+
+    // Wait for all state updates to complete
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
+    });
   });
 
-  it('should disable form while sending', async () => {
+  it("should disable form while sending", async () => {
     const user = userEvent.setup();
 
-    vi.doMock('../api/client', () => ({
-      sendCommand: vi.fn().mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 100))
-      ),
-    }));
+    apiClient.sendCommand.mockImplementation(
+      () => new Promise((resolve) => setTimeout(resolve, 100))
+    );
 
     render(
       <CommandForm
@@ -90,25 +118,28 @@ describe('CommandForm', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /Send Command/i });
+    const button = screen.getByRole("button", { name: /Send Command/i });
     await user.click(button);
 
     // Button should show "Sending..." and be disabled
     await waitFor(() => {
-      expect(screen.getByText('Sending...')).toBeInTheDocument();
+      expect(screen.getByText("Sending...")).toBeInTheDocument();
       expect(button).toBeDisabled();
+    });
+
+    // Wait for sending to complete
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
     });
   });
 
-  it('should call onError on failed submission', async () => {
+  it("should call onError on failed submission", async () => {
     const user = userEvent.setup();
-    const errorMessage = 'Network error';
+    const errorMessage = "Network error";
 
-    vi.doMock('../api/client', () => ({
-      sendCommand: vi.fn().mockRejectedValue({
-        response: { data: { error: errorMessage } },
-      }),
-    }));
+    apiClient.sendCommand.mockRejectedValue({
+      response: { data: { error: errorMessage } },
+    });
 
     render(
       <CommandForm
@@ -118,11 +149,16 @@ describe('CommandForm', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: /Send Command/i });
+    const button = screen.getByRole("button", { name: /Send Command/i });
     await user.click(button);
 
     await waitFor(() => {
-      expect(mockOnError).toHaveBeenCalled();
+      expect(mockOnError).toHaveBeenCalledWith(errorMessage);
+    });
+
+    // Wait for all state updates to complete
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
     });
   });
 });
