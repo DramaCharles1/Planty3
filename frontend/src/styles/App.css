@@ -44,9 +44,22 @@ body {
 }
 
 /* Dashboard */
-.dashboard h2 {
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.dashboard h2 {
+  margin: 0;
   color: #333;
+}
+
+.last-update {
+  font-size: 0.875rem;
+  color: #777;
+  font-weight: normal;
 }
 
 .plant-grid {
@@ -171,6 +184,13 @@ body {
   color: #333;
 }
 
+.plant-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
 .plant-info {
   margin-bottom: 2rem;
   padding: 1rem;
@@ -181,6 +201,89 @@ body {
 .plant-info p {
   margin: 0.5rem 0;
   color: #555;
+}
+
+.commands-section {
+  margin-top: 2rem;
+}
+
+/* Command Form */
+.command-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.form-group select {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.form-group select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #1b5e20;
+}
+
+.btn-primary:disabled {
+  background-color: #9e9e9e;
+  cursor: not-allowed;
+}
+
+/* Alert Messages */
+.alert {
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.alert-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.alert-error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #c62828;
 }
 
 .telemetry-section,

@@ -27,4 +27,12 @@ export const fetchCommands = async (plantId) => {
   return response.data;
 };
 
+export const sendCommand = async (plantId, command, args = {}) => {
+  const response = await apiClient.post(`/plants/${plantId}/send_command/`, {
+    command,
+    args,
+  });
+  return response.data;
+};
+
 export default apiClient;

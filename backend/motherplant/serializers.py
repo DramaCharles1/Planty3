@@ -57,3 +57,17 @@ class CommandLogSerializer(serializers.ModelSerializer):
         if obj.ack_at is None:
             return "pending"
         return "ok" if obj.ok else "error"
+
+
+class SendCommandSerializer(serializers.Serializer):
+    """Serializer for sending commands to plants"""
+
+    command = serializers.CharField(
+        max_length=64,
+        help_text="Command name (e.g., water, calibrate, reset)",
+    )
+    args = serializers.DictField(
+        required=False,
+        default=dict,
+        help_text="Optional command arguments as key-value pairs",
+    )
