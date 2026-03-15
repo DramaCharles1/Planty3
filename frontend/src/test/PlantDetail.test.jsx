@@ -199,13 +199,6 @@ describe('PlantDetail', () => {
           sent_at: '2024-03-15T09:00:00Z',
           status: 'ok',
         },
-        {
-          id: 2,
-          command: 'calibrate',
-          cmd_id: 'test-456',
-          sent_at: '2024-03-15T08:00:00Z',
-          status: 'pending',
-        },
       ],
     };
 
@@ -218,7 +211,6 @@ describe('PlantDetail', () => {
     await waitFor(() => {
       expect(screen.getByText('Command History')).toBeInTheDocument();
       expect(screen.getByText('water')).toBeInTheDocument();
-      expect(screen.getByText('calibrate')).toBeInTheDocument();
     });
   });
 

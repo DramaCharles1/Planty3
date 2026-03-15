@@ -39,27 +39,8 @@ describe('CommandForm', () => {
     const select = screen.getByRole('combobox');
     const options = select.querySelectorAll('option');
 
-    expect(options).toHaveLength(3);
+    expect(options).toHaveLength(1);
     expect(options[0]).toHaveValue('water');
-    expect(options[1]).toHaveValue('calibrate');
-    expect(options[2]).toHaveValue('reset');
-  });
-
-  it('should change command selection', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <CommandForm
-        plantId="test_plant_01"
-        onCommandSent={mockOnCommandSent}
-        onError={mockOnError}
-      />
-    );
-
-    const select = screen.getByRole('combobox');
-    await user.selectOptions(select, 'calibrate');
-
-    expect(select).toHaveValue('calibrate');
   });
 
   it('should call onCommandSent on successful submission', async () => {
@@ -142,34 +123,6 @@ describe('CommandForm', () => {
 
     await waitFor(() => {
       expect(mockOnError).toHaveBeenCalled();
-    });
-  });
-
-  it('should reset form after successful submission', async () => {
-    const user = userEvent.setup();
-    const mockResponse = { id: 1, command: 'calibrate', status: 'pending' };
-
-    vi.doMock('../api/client', () => ({
-      sendCommand: vi.fn().mockResolvedValue(mockResponse),
-    }));
-
-    render(
-      <CommandForm
-        plantId="test_plant_01"
-        onCommandSent={mockOnCommandSent}
-        onError={mockOnError}
-      />
-    );
-
-    const select = screen.getByRole('combobox');
-    await user.selectOptions(select, 'calibrate');
-    expect(select).toHaveValue('calibrate');
-
-    const button = screen.getByRole('button', { name: /Send Command/i });
-    await user.click(button);
-
-    await waitFor(() => {
-      expect(select).toHaveValue('water'); // Reset to default
     });
   });
 });

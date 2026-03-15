@@ -114,13 +114,6 @@ describe('API Client', () => {
             sent_at: '2024-03-15T10:00:00Z',
             status: 'ok',
           },
-          {
-            id: 2,
-            command: 'calibrate',
-            cmd_id: 'def-456',
-            sent_at: '2024-03-15T09:00:00Z',
-            status: 'pending',
-          },
         ],
       };
 
@@ -165,11 +158,11 @@ describe('API Client', () => {
 
       mockPost.mockResolvedValue({ data: mockResponse });
 
-      const result = await sendCommand('plant1', 'reset');
+      const result = await sendCommand('plant1', 'water');
 
       expect(result).toEqual(mockResponse);
       expect(mockPost).toHaveBeenCalledWith('/plants/plant1/send_command/', {
-        command: 'reset',
+        command: 'water',
         args: {},
       });
     });

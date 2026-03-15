@@ -57,7 +57,7 @@ class CommandLog(models.Model):
 
     plant = models.ForeignKey(Plant, on_delete=models.CASCADE, related_name="commands")
 
-    command = models.CharField(max_length=64, help_text="Command name (e.g., water, calibrate)")
+    command = models.CharField(max_length=64, help_text="Command name (e.g., water)")
 
     cmd_id = models.CharField(max_length=128, help_text="Unique command ID (UUID or int)")
 

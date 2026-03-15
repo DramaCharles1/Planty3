@@ -253,7 +253,7 @@ def publish_command(client, plant, command, cmd_id, **kwargs):
     Args:
         client: MQTT client instance
         plant: Plant model instance
-        command: Command name (e.g., 'water', 'calibrate')
+        command: Command name (e.g., 'water')
         cmd_id: Unique command ID (UUID or int)
         **kwargs: Additional command arguments to include in payload
     """

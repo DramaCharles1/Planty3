@@ -39,8 +39,6 @@ function CommandForm({ plantId, onCommandSent, onError }) {
           disabled={sending}
         >
           <option value="water">Water</option>
-          <option value="calibrate">Calibrate</option>
-          <option value="reset">Reset</option>
         </select>
       </div>
       <button type="submit" className="btn-primary" disabled={sending}>
