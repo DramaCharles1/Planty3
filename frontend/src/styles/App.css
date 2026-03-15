@@ -1,0 +1,294 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background-color: #2e7d32;
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-title {
+  text-decoration: none;
+  color: white;
+}
+
+.app-title h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.app-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Dashboard */
+.dashboard h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.plant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Plant Card */
+.plant-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.plant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.plant-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.plant-card-header h3 {
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-badge.online {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.offline {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-badge.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.warning {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.status-badge.error {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.plant-card-body p {
+  margin: 0.5rem 0;
+  color: #555;
+}
+
+.plant-location {
+  font-size: 0.95rem;
+}
+
+.plant-metric {
+  font-size: 1rem;
+}
+
+.plant-last-seen {
+  margin-top: 0.75rem;
+  color: #777;
+  font-size: 0.875rem;
+}
+
+/* Plant Detail */
+.plant-detail {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: #2e7d32;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.plant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.plant-header h2 {
+  font-size: 2rem;
+  color: #333;
+}
+
+.plant-info {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.plant-info p {
+  margin: 0.5rem 0;
+  color: #555;
+}
+
+.telemetry-section,
+.commands-section {
+  margin-top: 2rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.telemetry-section h3,
+.commands-section h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.time-range-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.time-range-selector label {
+  font-weight: 500;
+  color: #555;
+}
+
+.time-range-selector select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.telemetry-chart {
+  height: 400px;
+  margin-bottom: 2rem;
+}
+
+/* Command Table */
+.command-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.command-table thead {
+  background-color: #f5f5f5;
+}
+
+.command-table th,
+.command-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.command-table th {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.command-table td {
+  color: #333;
+}
+
+.command-table tbody tr:hover {
+  background-color: #fafafa;
+}
+
+.cmd-id {
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.error-cell {
+  color: #c62828;
+  font-size: 0.875rem;
+}
+
+/* Utility */
+.loading,
+.error,
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #666;
+  font-size: 1.125rem;
+}
+
+.error {
+  color: #c62828;
+}
+
+.empty-state {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 2rem;
+  margin: 1rem 0;
+}
