@@ -3,6 +3,8 @@ import logging
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -160,6 +162,22 @@ def handle_telemetry(plant, metric, payload):
     state.save()
 
     logger.info("Updated %s: %s=%s", plant.plant_id, metric, value)
+
+    # ---- Broadcast to WebSocket clients ----
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        room_group_name = f"telemetry_{plant.plant_id}"
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                "type": "telemetry_update",
+                "plant_id": plant.plant_id,
+                "metric": metric,
+                "value": value,
+                "timestamp": timestamp.isoformat(),
+            },
+        )
+        logger.debug("Broadcasted telemetry to WebSocket group: %s", room_group_name)
 
 
 def handle_status(plant, payload):

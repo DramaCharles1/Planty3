@@ -35,4 +35,19 @@ export const sendCommand = async (plantId, command, args = {}) => {
   return response.data;
 };
 
+export const createPlant = async (plantData) => {
+  const response = await apiClient.post('/plants/', plantData);
+  return response.data;
+};
+
+export const updatePlant = async (plantId, plantData) => {
+  const response = await apiClient.put(`/plants/${plantId}/`, plantData);
+  return response.data;
+};
+
+export const deletePlant = async (plantId) => {
+  const response = await apiClient.delete(`/plants/${plantId}/`);
+  return response.data;
+};
+
 export default apiClient;
