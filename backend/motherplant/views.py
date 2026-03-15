@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.utils import timezone
-from rest_framework import filters, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -10,8 +10,10 @@ from .serializers import (
     CommandLogSerializer,
     PlantDetailSerializer,
     PlantListSerializer,
+    SendCommandSerializer,
     TelemetrySerializer,
 )
+from .services import send_command
 
 
 class PlantViewSet(viewsets.ReadOnlyModelViewSet):
@@ -92,3 +94,26 @@ class PlantViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = CommandLogSerializer(queryset, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"])
+    def send_command(self, request, plant_id=None):
+        """Send a command to a plant device"""
+        plant = self.get_object()
+
+        serializer = SendCommandSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        command = serializer.validated_data["command"]
+        args = serializer.validated_data.get("args", {})
+
+        try:
+            command_log = send_command(plant, command, **args)
+            return Response(
+                CommandLogSerializer(command_log).data,
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

@@ -3,6 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { fetchPlantDetail, fetchTelemetry, fetchCommands } from '../api/client';
 import TelemetryChart from '../components/TelemetryChart';
 import CommandHistory from '../components/CommandHistory';
+import CommandForm from '../components/CommandForm';
+
+const REFRESH_INTERVAL = 30000; // 30 seconds
 
 function PlantDetail() {
   const { plantId } = useParams();
@@ -12,6 +15,9 @@ function PlantDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState('1h');
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     const loadPlantData = async () => {
@@ -25,6 +31,8 @@ function PlantDetail() {
         setPlant(plantData);
         setTelemetry(telemetryData.results || []);
         setCommands(commandsData.results || []);
+        setLastUpdate(new Date());
+        setError(null);
       } catch (err) {
         console.error('Failed to load plant data:', err);
         setError('Failed to load plant data. Please try again later.');
@@ -34,6 +42,12 @@ function PlantDetail() {
     };
 
     loadPlantData();
+
+    // Set up auto-refresh
+    const intervalId = setInterval(loadPlantData, REFRESH_INTERVAL);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, [plantId, timeRange]);
 
   const getHoursFromRange = (range) => {
@@ -44,6 +58,30 @@ function PlantDetail() {
       '7d': 168,
     };
     return rangeMap[range] || 1;
+  };
+
+  const handleCommandSent = async (commandLog) => {
+    setSuccessMessage(`Command "${commandLog.command}" sent successfully!`);
+    setErrorMessage(null);
+
+    // Auto-clear success message after 5 seconds
+    setTimeout(() => setSuccessMessage(null), 5000);
+
+    // Refresh command history
+    try {
+      const commandsData = await fetchCommands(plantId);
+      setCommands(commandsData.results || []);
+    } catch (err) {
+      console.error('Failed to refresh commands:', err);
+    }
+  };
+
+  const handleCommandError = (error) => {
+    setErrorMessage(error);
+    setSuccessMessage(null);
+
+    // Auto-clear error message after 5 seconds
+    setTimeout(() => setErrorMessage(null), 5000);
   };
 
   if (loading) {
@@ -72,9 +110,16 @@ function PlantDetail() {
 
       <div className="plant-header">
         <h2>{plant.name || plant.plant_id}</h2>
-        <span className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
-          {isOnline ? '● Online' : '○ Offline'}
-        </span>
+        <div className="plant-header-right">
+          <span className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
+            {isOnline ? '● Online' : '○ Offline'}
+          </span>
+          {lastUpdate && (
+            <span className="last-update">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="plant-info">
@@ -94,6 +139,9 @@ function PlantDetail() {
         </p>
       </div>
 
+      {successMessage && <div className="alert alert-success">{successMessage}</div>}
+      {errorMessage && <div className="alert alert-error">{errorMessage}</div>}
+
       <div className="telemetry-section">
         <div className="section-header">
           <h3>Telemetry</h3>
@@ -112,6 +160,15 @@ function PlantDetail() {
         ) : (
           <div className="empty-state">No telemetry data available for this time range.</div>
         )}
+      </div>
+
+      <div className="commands-section">
+        <h3>Send Command</h3>
+        <CommandForm
+          plantId={plantId}
+          onCommandSent={handleCommandSent}
+          onError={handleCommandError}
+        />
       </div>
 
       <div className="commands-section">
