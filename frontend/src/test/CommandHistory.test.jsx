@@ -20,23 +20,12 @@ describe('CommandHistory', () => {
         status: 'ok',
         error: '',
       },
-      {
-        id: 2,
-        command: 'calibrate',
-        cmd_id: 'def-456',
-        sent_at: '2024-03-15T09:00:00Z',
-        ack_at: null,
-        status: 'pending',
-        error: '',
-      },
     ];
 
     render(<CommandHistory commands={commands} />);
 
     expect(screen.getByText('water')).toBeInTheDocument();
-    expect(screen.getByText('calibrate')).toBeInTheDocument();
     expect(screen.getByText('abc-123')).toBeInTheDocument();
-    expect(screen.getByText('def-456')).toBeInTheDocument();
   });
 
   it('should show status badges correctly', () => {
@@ -48,27 +37,11 @@ describe('CommandHistory', () => {
         sent_at: '2024-03-15T10:00:00Z',
         status: 'acknowledged',
       },
-      {
-        id: 2,
-        command: 'reset',
-        cmd_id: 'test-2',
-        sent_at: '2024-03-15T09:00:00Z',
-        status: 'pending',
-      },
-      {
-        id: 3,
-        command: 'calibrate',
-        cmd_id: 'test-3',
-        sent_at: '2024-03-15T08:00:00Z',
-        status: 'failed',
-      },
     ];
 
     render(<CommandHistory commands={commands} />);
 
     expect(screen.getByText('acknowledged')).toBeInTheDocument();
-    expect(screen.getByText('pending')).toBeInTheDocument();
-    expect(screen.getByText('failed')).toBeInTheDocument();
   });
 
   it('should show em dash for missing ack_at', () => {

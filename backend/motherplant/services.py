@@ -34,7 +34,7 @@ def send_command(plant: Plant, command: str, **kwargs) -> CommandLog:
 
     Args:
         plant: Plant instance to send command to
-        command: Command name (e.g., 'water', 'calibrate', 'reset')
+        command: Command name (e.g., 'water')
         **kwargs: Additional command arguments
 
     Returns:

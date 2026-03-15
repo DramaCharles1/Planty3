@@ -85,7 +85,7 @@ class SendCommandSerializer(serializers.Serializer):
 
     command = serializers.CharField(
         max_length=64,
-        help_text="Command name (e.g., water, calibrate, reset)",
+        help_text="Command name (e.g., water)",
     )
     args = serializers.DictField(
         required=False,

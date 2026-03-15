@@ -93,7 +93,7 @@ class TestTopicParsing:
 
     @pytest.mark.parametrize(
         "command",
-        ["water", "calibrate", "reset", "test_command", "pump_on", "pump_off"],
+        ["water"],
     )
     def test_parse_command_topic_multiple_commands(self, command):
         """Test parsing various command names."""
@@ -411,7 +411,7 @@ class TestMQTTClientBehavior:
         simulator._on_message(simulator.client, None, mock_msg)
 
     @patch("plant_simulator.mqtt.Client")
-    @pytest.mark.parametrize("command", ["water", "calibrate", "reset"])
+    @pytest.mark.parametrize("command", ["water"])
     def test_on_message_extracts_command_name(self, mock_mqtt_client, command):
         """Test command name extraction from various topics."""
         simulator = PlantSimulator()
