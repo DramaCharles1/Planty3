@@ -3,8 +3,10 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
+from rest_framework.test import APITestCase
 
 from motherplant.management.commands import mqtt_client
+from motherplant.models import Plant, PlantState, Telemetry
 
 
 class MqttClientTests(TestCase):
@@ -65,16 +67,24 @@ class MqttClientTests(TestCase):
         with self.assertRaises(ValueError):
             mqtt_client.parse_topic(self.invalid_topic)
 
+    @patch("motherplant.management.commands.mqtt_client.get_channel_layer")
     @patch("motherplant.management.commands.mqtt_client.Plant")
     @patch("motherplant.management.commands.mqtt_client.PlantState")
     @patch("motherplant.management.commands.mqtt_client.Telemetry")
-    def test_on_message_valid_telemetry(self, mock_telemetry, mock_plantstate, mock_plant):
+    def test_on_message_valid_telemetry(
+        self, mock_telemetry, mock_plantstate, mock_plant, mock_channel_layer
+    ):
         mock_msg = MagicMock()
         mock_msg.topic = self.valid_telemetry_topic
         mock_msg.payload.decode.return_value = json.dumps(self.telemetry_payload)
 
-        mock_plant.objects.get.return_value = MagicMock()
+        mock_plant_instance = MagicMock()
+        mock_plant_instance.plant_id = "plant01"
+        mock_plant.objects.get.return_value = mock_plant_instance
         mock_plantstate.objects.get_or_create.return_value = (MagicMock(), True)
+
+        # Mock channel layer to return None (no broadcasting in tests)
+        mock_channel_layer.return_value = None
 
         mqtt_client.on_message(None, None, mock_msg)
         self.assertTrue(mock_telemetry.objects.create.called)
@@ -191,3 +201,137 @@ class MqttClientTests(TestCase):
         self.assertEqual(payload["cmd_id"], "test-cmd-123")
         self.assertIn("ts", payload)
         self.assertEqual(payload["duration"], 30)
+
+
+class PlantCRUDTests(APITestCase):
+    """Tests for Plant CRUD operations via API"""
+
+    def setUp(self):
+        self.plant_data = {
+            "plant_id": "test_plant_01",
+            "name": "Test Plant",
+            "location": "Test Location",
+        }
+        self.plant = Plant.objects.create(**self.plant_data)
+
+    def test_list_plants(self):
+        """Test GET /api/plants/"""
+        response = self.client.get("/api/plants/")
+        self.assertEqual(response.status_code, 200)
+        # API returns paginated results (or list depending on config)
+        # Check for our test plant in the results
+        if isinstance(response.data, dict):
+            # Paginated response
+            results = response.data.get("results", [])
+        else:
+            # List response
+            results = response.data
+        plant_ids = [p["plant_id"] for p in results]
+        self.assertIn("test_plant_01", plant_ids)
+
+    def test_retrieve_plant(self):
+        """Test GET /api/plants/{plant_id}/"""
+        response = self.client.get(f"/api/plants/{self.plant.plant_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["plant_id"], "test_plant_01")
+        self.assertEqual(response.data["name"], "Test Plant")
+
+    def test_create_plant(self):
+        """Test POST /api/plants/"""
+        new_plant_data = {
+            "plant_id": "new_plant_01",
+            "name": "New Plant",
+            "location": "New Location",
+        }
+        response = self.client.post("/api/plants/", new_plant_data, format="json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["plant_id"], "new_plant_01")
+        self.assertEqual(response.data["name"], "New Plant")
+
+        # Verify plant exists in database
+        plant = Plant.objects.get(plant_id="new_plant_01")
+        self.assertEqual(plant.name, "New Plant")
+        self.assertEqual(plant.location, "New Location")
+
+    def test_create_plant_duplicate_plant_id(self):
+        """Test creating plant with duplicate plant_id fails"""
+        duplicate_data = {
+            "plant_id": "test_plant_01",
+            "name": "Duplicate",
+        }
+        response = self.client.post("/api/plants/", duplicate_data, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_plant_empty_plant_id(self):
+        """Test creating plant with empty plant_id fails"""
+        invalid_data = {
+            "plant_id": "",
+            "name": "Invalid",
+        }
+        response = self.client.post("/api/plants/", invalid_data, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_plant_missing_plant_id(self):
+        """Test creating plant without plant_id fails"""
+        invalid_data = {
+            "name": "Invalid",
+        }
+        response = self.client.post("/api/plants/", invalid_data, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_plant(self):
+        """Test PUT /api/plants/{plant_id}/"""
+        update_data = {
+            "plant_id": "test_plant_01",
+            "name": "Updated Plant",
+            "location": "Updated Location",
+        }
+        response = self.client.put(
+            f"/api/plants/{self.plant.plant_id}/", update_data, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], "Updated Plant")
+        self.assertEqual(response.data["location"], "Updated Location")
+
+        # Verify plant updated in database
+        self.plant.refresh_from_db()
+        self.assertEqual(self.plant.name, "Updated Plant")
+        self.assertEqual(self.plant.location, "Updated Location")
+
+    def test_partial_update_plant(self):
+        """Test PATCH /api/plants/{plant_id}/"""
+        update_data = {
+            "name": "Partially Updated",
+        }
+        response = self.client.patch(
+            f"/api/plants/{self.plant.plant_id}/", update_data, format="json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["name"], "Partially Updated")
+        self.assertEqual(response.data["location"], "Test Location")  # Unchanged
+
+    def test_delete_plant(self):
+        """Test DELETE /api/plants/{plant_id}/"""
+        # Create related data to verify cascade delete
+        PlantState.objects.create(plant=self.plant)
+        Telemetry.objects.create(
+            plant=self.plant,
+            type="moisture",
+            value=50.0,
+            timestamp=datetime(2025, 12, 25, 12, 0, 0, tzinfo=timezone.utc),
+        )
+
+        response = self.client.delete(f"/api/plants/{self.plant.plant_id}/")
+        self.assertEqual(response.status_code, 204)
+
+        # Verify plant deleted
+        self.assertFalse(Plant.objects.filter(plant_id="test_plant_01").exists())
+
+        # Verify related data deleted (cascade)
+        self.assertFalse(PlantState.objects.filter(plant=self.plant.id).exists())
+        self.assertFalse(Telemetry.objects.filter(plant=self.plant.id).exists())
+
+    def test_delete_nonexistent_plant(self):
+        """Test deleting non-existent plant returns 404"""
+        response = self.client.delete("/api/plants/nonexistent_plant/")
+        self.assertEqual(response.status_code, 404)

@@ -10,20 +10,26 @@ from .serializers import (
     CommandLogSerializer,
     PlantDetailSerializer,
     PlantListSerializer,
+    PlantWriteSerializer,
     SendCommandSerializer,
     TelemetrySerializer,
 )
 from .services import send_command
 
 
-class PlantViewSet(viewsets.ReadOnlyModelViewSet):
+class PlantViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Plant model.
 
     list: Get all plants with their current state
     retrieve: Get a single plant by plant_id
+    create: Create a new plant
+    update: Update an existing plant
+    partial_update: Partially update an existing plant
+    destroy: Delete a plant and all related data
     telemetry: Get telemetry data for a plant (filterable by time range)
     commands: Get command history for a plant
+    send_command: Send a command to a plant device
     """
 
     queryset = Plant.objects.select_related("state").all()
@@ -36,7 +42,17 @@ class PlantViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer_class(self):
         if self.action == "list":
             return PlantListSerializer
+        elif self.action in ["create", "update", "partial_update"]:
+            return PlantWriteSerializer
         return PlantDetailSerializer
+
+    def perform_destroy(self, instance):
+        """
+        Delete plant and all related data (PlantState, Telemetry, CommandLog).
+        Django's CASCADE handles this automatically.
+        """
+        instance.delete()
+        # Related objects deleted via CASCADE: PlantState, Telemetry, CommandLog
 
     @action(detail=True, methods=["get"])
     def telemetry(self, request, plant_id=None):

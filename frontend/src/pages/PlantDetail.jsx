@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { fetchPlantDetail, fetchTelemetry, fetchCommands } from '../api/client';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { fetchPlantDetail, fetchTelemetry, fetchCommands, updatePlant, deletePlant } from '../api/client';
+import { connectToPlantTelemetry, disconnectWebSocket } from '../api/websocket';
 import TelemetryChart from '../components/TelemetryChart';
 import CommandHistory from '../components/CommandHistory';
 import CommandForm from '../components/CommandForm';
+import PlantForm from '../components/PlantForm';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 function PlantDetail() {
   const { plantId } = useParams();
+  const navigate = useNavigate();
   const [plant, setPlant] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
   const [commands, setCommands] = useState([]);
@@ -18,6 +21,10 @@ function PlantDetail() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => {
     const loadPlantData = async () => {
@@ -49,6 +56,64 @@ function PlantDetail() {
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [plantId, timeRange]);
+
+  // WebSocket connection for real-time telemetry updates
+  useEffect(() => {
+    const handleTelemetryUpdate = (data) => {
+      console.log('Received telemetry update:', data);
+      
+      // Update telemetry list with new data point
+      setTelemetry((prevTelemetry) => {
+        const newDataPoint = {
+          timestamp: data.timestamp,
+          value: data.value,
+          type: data.metric,
+        };
+        
+        // Add new data point and sort by timestamp (newest first)
+        const updated = [newDataPoint, ...prevTelemetry];
+        
+        // Remove data points outside the current time range
+        const hoursToKeep = getHoursFromRange(timeRange);
+        const cutoffTime = new Date(Date.now() - hoursToKeep * 60 * 60 * 1000);
+        
+        return updated.filter((point) => new Date(point.timestamp) > cutoffTime);
+      });
+
+      // Update plant state with latest moisture value
+      if (data.metric === 'moisture' && plant) {
+        setPlant((prevPlant) => ({
+          ...prevPlant,
+          state: {
+            ...prevPlant.state,
+            last_moisture: data.value,
+          },
+        }));
+      }
+
+      setLastUpdate(new Date());
+    };
+
+    const handleWsError = (error) => {
+      console.error('WebSocket error:', error);
+      setWsConnected(false);
+    };
+
+    const handleWsClose = () => {
+      console.log('WebSocket closed');
+      setWsConnected(false);
+    };
+
+    // Connect to WebSocket
+    const ws = connectToPlantTelemetry(plantId, handleTelemetryUpdate, handleWsError, handleWsClose);
+    setWsConnected(true);
+
+    // Cleanup on unmount
+    return () => {
+      disconnectWebSocket(ws);
+      setWsConnected(false);
+    };
+  }, [plantId, timeRange, plant]);
 
   const getHoursFromRange = (range) => {
     const rangeMap = {
@@ -84,6 +149,42 @@ function PlantDetail() {
     setTimeout(() => setErrorMessage(null), 5000);
   };
 
+  const handleEditPlant = async (plantData) => {
+    try {
+      setFormError(null);
+      await updatePlant(plantId, plantData);
+      setSuccessMessage('Plant updated successfully!');
+      setShowEditModal(false);
+      // Reload plant data
+      const plantData_ = await fetchPlantDetail(plantId);
+      setPlant(plantData_);
+      // Auto-clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error('Failed to update plant:', err);
+      if (err.response?.data) {
+        const errors = Object.entries(err.response.data)
+          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+          .join('; ');
+        setFormError(errors);
+      } else {
+        setFormError('Failed to update plant. Please try again.');
+      }
+    }
+  };
+
+  const handleDeletePlant = async () => {
+    try {
+      await deletePlant(plantId);
+      navigate('/');
+    } catch (err) {
+      console.error('Failed to delete plant:', err);
+      setErrorMessage('Failed to delete plant. Please try again.');
+      setShowDeleteModal(false);
+      setTimeout(() => setErrorMessage(null), 5000);
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading plant details...</div>;
   }
@@ -111,9 +212,20 @@ function PlantDetail() {
       <div className="plant-header">
         <h2>{plant.name || plant.plant_id}</h2>
         <div className="plant-header-right">
+          <button onClick={() => setShowEditModal(true)} className="btn btn-secondary">
+            Edit
+          </button>
+          <button onClick={() => setShowDeleteModal(true)} className="btn btn-danger">
+            Delete
+          </button>
           <span className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
             {isOnline ? '● Online' : '○ Offline'}
           </span>
+          {wsConnected && (
+            <span className="ws-indicator" title="Real-time updates active">
+              🔴 Live
+            </span>
+          )}
           {lastUpdate && (
             <span className="last-update">
               Last updated: {lastUpdate.toLocaleTimeString()}
@@ -175,6 +287,60 @@ function PlantDetail() {
         <h3>Command History</h3>
         <CommandHistory commands={commands} />
       </div>
+
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Plant</h2>
+              <button
+                className="modal-close"
+                onClick={() => setShowEditModal(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            {formError && <div className="alert alert-error">{formError}</div>}
+            <PlantForm
+              plant={plant}
+              onSubmit={handleEditPlant}
+              onCancel={() => setShowEditModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Delete Plant</h2>
+              <button
+                className="modal-close"
+                onClick={() => setShowDeleteModal(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="confirmation-dialog">
+              <p>
+                Are you sure you want to delete <strong>{plant.name || plant.plant_id}</strong>?
+                This will permanently remove all telemetry data and command history.
+              </p>
+              <div className="confirmation-actions">
+                <button onClick={handleDeletePlant} className="btn btn-danger">
+                  Delete
+                </button>
+                <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

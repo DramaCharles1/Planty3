@@ -59,6 +59,27 @@ class CommandLogSerializer(serializers.ModelSerializer):
         return "ok" if obj.ok else "error"
 
 
+class PlantWriteSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating plants"""
+
+    class Meta:
+        model = Plant
+        fields = ["plant_id", "name", "location"]
+        extra_kwargs = {
+            "plant_id": {"required": True},
+            "name": {"required": False, "allow_blank": True},
+            "location": {"required": False, "allow_blank": True},
+        }
+
+    def validate_plant_id(self, value):
+        """Ensure plant_id is not empty and meets basic constraints"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("plant_id cannot be empty")
+        if len(value) > 64:
+            raise serializers.ValidationError("plant_id cannot exceed 64 characters")
+        return value.strip()
+
+
 class SendCommandSerializer(serializers.Serializer):
     """Serializer for sending commands to plants"""
 

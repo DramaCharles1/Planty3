@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "corsheaders",
+    "channels",
     "motherplant",
 ]
 
@@ -74,6 +76,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "planty.wsgi.application"
+ASGI_APPLICATION = "planty.asgi.application"
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 
 # Database
@@ -139,6 +149,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite dev server
     "http://localhost:3000",  # Alternative frontend port
 ]
+
+# WebSocket CORS configuration
+ALLOWED_HOSTS = ["*"]  # For development only
+
 
 # drf-spectacular configuration
 SPECTACULAR_SETTINGS = {

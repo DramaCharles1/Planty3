@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 
 function CommandForm({ plantId, onCommandSent, onError }) {
   const [command, setCommand] = useState('water');
@@ -50,11 +49,5 @@ function CommandForm({ plantId, onCommandSent, onError }) {
     </form>
   );
 }
-
-CommandForm.propTypes = {
-  plantId: PropTypes.string.isRequired,
-  onCommandSent: PropTypes.func.isRequired,
-  onError: PropTypes.func.isRequired,
-};
 
 export default CommandForm;
