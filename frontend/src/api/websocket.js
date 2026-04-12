@@ -2,7 +2,8 @@
  * WebSocket client for real-time telemetry updates
  */
 
-const WS_BASE_URL = "ws://localhost:8000";
+const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+const WS_BASE_URL = `${protocol}//${window.location.host}`;
 
 /**
  * Create a WebSocket connection for a plant's telemetry updates
