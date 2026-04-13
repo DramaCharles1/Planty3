@@ -147,7 +147,9 @@ REST_FRAMEWORK = {
 # CORS configuration (for development)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite dev server
+    f"http://{config('BACKEND_IP')}:5173",  # Vite dev server using IP address
     "http://localhost:3000",  # Alternative frontend port
+    f"http://{config('BACKEND_IP')}:3000",  # Alternative frontend port using IP address
 ]
 
 # WebSocket CORS configuration
