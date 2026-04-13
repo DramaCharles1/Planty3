@@ -109,6 +109,15 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - ./uptime-kuma:/app/data
+    ports:
+      - "3001:3001"
+
 volumes:
   mosquitto_data:
 
