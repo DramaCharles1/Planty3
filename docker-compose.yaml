@@ -76,8 +76,8 @@ services:
 
   simulator:
     build:
-      context: ./mqtt/simulator
-      dockerfile: Dockerfile
+      context: ./mqtt
+      dockerfile: simulator/Dockerfile
     container_name: planty3-simulator
     environment:
       PLANT_ID: ${SIM_PLANT_ID:-sim_plant_01}

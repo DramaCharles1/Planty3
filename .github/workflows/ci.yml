@@ -26,6 +26,8 @@ jobs:
       working-directory: frontend
     - name: Lint backend
       run: ruff check backend/
+    - name: Lint core layer
+      run: ruff check mqtt/core/
     - name: Lint simulator
       run: ruff check mqtt/simulator/
     - name: Lint frontend
@@ -46,7 +48,9 @@ jobs:
       run: docker compose exec -T backend pytest --cov
     - name: Build simulator test image
       run: cd mqtt/simulator && docker build -t planty3-simulator-test -f Dockerfile .
+    - name: Run core layer tests with coverage
+      run: docker run --rm -e PYTHONPATH=/app -v $(pwd)/mqtt/core:/app planty3-simulator-test pytest --cov=core_layer --cov-report=term-missing
     - name: Run simulator tests with coverage
-      run: docker run --rm -v $(pwd)/mqtt/simulator:/app planty3-simulator-test pytest --cov=plant_simulator --cov-report=term-missing
+      run: docker run --rm -e PYTHONPATH=/app:/app/core -v $(pwd)/mqtt/core:/app/core -v $(pwd)/mqtt/simulator:/app planty3-simulator-test pytest --cov=plant_simulator --cov-report=term-missing
     - name: Run frontend tests
       run: docker compose exec -T frontend npm test
