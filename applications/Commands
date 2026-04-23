@@ -1,0 +1,77 @@
+Send:
+MOTR=<parameter>,<power>,<duration>
+<parameter>: 1=On, 2=Off, 2=Check if on/off (1=on,0=off)
+<power>: 0-100%
+<duration>: int ms
+Return:
+MOTR=<parameter>,[<power>],[<duration>],OK if success
+MOTR,ERR if error
+
+Send: 
+MOIS=<sensor number>,<samples>
+<sensor number>: select which moisture sensor to use
+<samples>: nmbr Int
+Return:
+MOIS=<sensor number>,<value>,OK if success
+MOIS,ERR if error
+
+Send:
+TEMP=<parameter>
+<parameter>: 1=read temperature, 2=read humidity
+Return:
+TEMP=<parameter>,<value>,OK
+TEMP,ERR if error
+
+Send:
+read:
+PLANT=<parameter>
+write:
+PLANT=<parameter>,<string 1>...,<string n>
+<parameter>: 1=read plant data from EEPROM, 2=write plant data to EEPROM
+<string>: write plant
+return:
+PLANT=<string 1>...,<string n>,OK
+PLANT,ERR if error
+
+Send: 
+ALS
+return:
+ALS=<parameter>,OK
+
+Send:
+LED=<read/write>,<color>,<brightness>
+<read/write>: 1=write, 2=read
+<parameter>: 0=off, 1=purple, 2=white, 3=red, 4=green, 5=blue
+<brightness>: 0-255
+<red>: 0:255
+<green>: 0:255
+<blue>: 0:255
+Return write:
+LED=<parameter>,OK
+return read:
+LED=<read>,<red>,<green>,<blue>OK
+
+Send:
+PI=<read status>,<on/off>,<setpoint>
+<read status>: 1=read, 2=write
+<on/off>: 0=off, 1=on
+<setpoint>: [double]
+Return:
+PI=<read status>,<on/off>,<setpoint>,OK
+
+PISET=<read/write>,<Kp>,<Ki>,<T>,<Max control>
+<read/write>: 1=read parameters, 2=write parameters [int]
+<Kp>: [double]
+<Ki>: [double]
+<T>: [double]
+<Max control>: [double]
+Return:
+PISET=<Kp>,<Ki>,<T>,<Max control>,OK
+
+Reboot:
+PISET=2,1.0,0.0,200,50000
+PI=2,1,30000
+
+Send:
+LIGHT=<parameter>
+<parameter>: 0=off, 1=on
