@@ -286,3 +286,8 @@ Example usage patterns:
 - `.env` exists in-repo with dev defaults; do not add real secrets or production keys.
 - `backend/planty/settings.py` contains a hard-coded `SECRET_KEY` (dev only); do not
   replicate this for production configuration.
+
+## Git
+
+ - Do not commit
+ - Do not push
