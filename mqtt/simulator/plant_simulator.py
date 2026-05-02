@@ -2,11 +2,15 @@
 """
 Plant Simulator - Simulates a plant device for end-to-end testing.
 
-This simulator:
-- Publishes moisture telemetry at configurable intervals
-- Publishes online/offline status messages
-- Subscribes to commands and acknowledges them with ok: true
-- Connects to MQTT broker as a normal plant device
+This simulator uses the core layer as an adapter, demonstrating how to integrate
+the platform-agnostic core with a real MQTT client.
+
+Adapter responsibilities:
+- Translate paho.mqtt.client callbacks into core events
+- Execute core actions (Publish, ExecuteCommand, Log)
+- Generate sensor events (MetricSample)
+- Handle Tick events for periodic telemetry/heartbeat
+- Manage lifecycle: boot → connect → run loop → shutdown
 """
 
 import datetime
@@ -21,6 +25,43 @@ import time
 from typing import Optional
 
 import paho.mqtt.client as mqtt
+
+# Import core layer - handle both test and runtime environments
+try:
+    # Try direct import first (works when PYTHONPATH includes core)
+    from core_layer import (
+        Action,
+        Booted,
+        CommandResult,
+        CoreConfig,
+        CoreLayer,
+        ExecuteCommand,
+        Log,
+        MetricSample,
+        MqttConnected,
+        MqttDisconnected,
+        MqttMessage,
+        Publish,
+        Tick,
+    )
+except ImportError:
+    # Fall back to relative path for runtime
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core"))
+    from core_layer import (
+        Action,
+        Booted,
+        CommandResult,
+        CoreConfig,
+        CoreLayer,
+        ExecuteCommand,
+        Log,
+        MetricSample,
+        MqttConnected,
+        MqttDisconnected,
+        MqttMessage,
+        Publish,
+        Tick,
+    )
 
 
 # Configuration from environment variables
@@ -92,7 +133,15 @@ class MoistureSensor:
 
 
 class PlantSimulator:
-    """Main plant simulator class."""
+    """
+    Plant simulator adapter using core layer.
+
+    This adapter:
+    - Translates MQTT callbacks to core events
+    - Executes core actions (Publish, ExecuteCommand, Log)
+    - Generates sensor events (MetricSample)
+    - Maintains existing simulator behavior
+    """
 
     def __init__(self):
         self.plant_id = PLANT_ID
@@ -101,6 +150,10 @@ class PlantSimulator:
         self.telemetry_interval = TELEMETRY_INTERVAL
         self.status_heartbeat_interval = STATUS_HEARTBEAT_INTERVAL
         self.shutdown_flag = False
+
+        # Initialize core layer with config
+        config = CoreConfig(plant_id=self.plant_id)
+        self.core = CoreLayer(config=config)
 
         # Initialize moisture sensor
         self.moisture_sensor = MoistureSensor(
@@ -113,12 +166,71 @@ class PlantSimulator:
         self.client.on_message = self._on_message
         self.client.on_disconnect = self._on_disconnect
 
+        # Process boot event
+        ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        actions = self.core.handle_event(Booted(ts=ts))
+        self._execute_actions(actions)
+
         logger.info(
             "Plant Simulator initialized: plant_id=%s, broker=%s:%s",
             self.plant_id,
             self.mqtt_broker_host,
             self.mqtt_broker_port,
         )
+
+    def _execute_actions(self, actions: list[Action]) -> None:
+        """Execute actions returned by core layer."""
+        for action in actions:
+            if isinstance(action, Publish):
+                self._execute_publish(action)
+            elif isinstance(action, ExecuteCommand):
+                self._execute_command(action)
+            elif isinstance(action, Log):
+                self._execute_log(action)
+            else:
+                logger.warning("Unknown action type: %s", type(action))
+
+    def _execute_publish(self, action: Publish) -> None:
+        """Execute Publish action via MQTT client."""
+        result = self.client.publish(
+            action.topic, action.payload_bytes, qos=action.qos, retain=action.retain
+        )
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            logger.debug(
+                "Published to %s (qos=%d, retain=%s): %s",
+                action.topic,
+                action.qos,
+                action.retain,
+                action.payload_bytes.decode("utf-8"),
+            )
+        else:
+            logger.error("Failed to publish to %s, rc=%s", action.topic, result.rc)
+
+    def _execute_command(self, action: ExecuteCommand) -> None:
+        """
+        Execute command action (simulate actuator).
+
+        For simulator, all commands succeed immediately.
+        """
+        logger.info(
+            "Executing command: %s (cmd_id=%s, args=%s)",
+            action.command,
+            action.cmd_id,
+            action.args,
+        )
+
+        # Simulate command execution (always succeeds for simulator)
+        ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        result = CommandResult(
+            cmd_id=action.cmd_id, command=action.command, ok=True, error=None, ts=ts
+        )
+        actions = self.core.handle_event(result)
+        self._execute_actions(actions)
+
+    def _execute_log(self, action: Log) -> None:
+        """Execute Log action via Python logging."""
+        log_method = getattr(logger, action.level.lower(), logger.info)
+        log_method("%s", action.message, extra=action.fields)
 
     def _on_connect(self, client, userdata, flags, rc):
         """Callback when connected to MQTT broker."""
@@ -128,8 +240,11 @@ class PlantSimulator:
             command_topic = f"planty/plant/{self.plant_id}/command/+"
             client.subscribe(command_topic, qos=1)
             logger.info("Subscribed to commands: %s", command_topic)
-            # Publish online status
-            self.publish_status(online=True)
+
+            # Send MqttConnected event to core
+            ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+            actions = self.core.handle_event(MqttConnected(ts=ts))
+            self._execute_actions(actions)
         else:
             logger.error("Failed to connect to MQTT broker, return code: %s", rc)
 
@@ -140,63 +255,55 @@ class PlantSimulator:
         else:
             logger.info("Disconnected from MQTT broker")
 
+        # Send MqttDisconnected event to core
+        ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        actions = self.core.handle_event(MqttDisconnected(ts=ts))
+        self._execute_actions(actions)
+
     def _on_message(self, client, userdata, msg):
         """Callback when a message is received."""
         topic = msg.topic
         try:
-            payload = json.loads(msg.payload.decode("utf-8"))
-            logger.info("Received message on topic %s: %s", topic, payload)
+            payload_bytes = msg.payload
+            ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
-            # Parse topic to extract command name
-            command = parse_command_topic(topic)
-            if command:
-                cmd_id = payload.get("cmd_id")
+            # Send MqttMessage event to core
+            mqtt_msg = MqttMessage(topic=topic, payload_bytes=payload_bytes, ts=ts)
+            actions = self.core.handle_event(mqtt_msg)
+            self._execute_actions(actions)
 
-                if cmd_id:
-                    logger.info("Received command: %s (cmd_id=%s)", command, cmd_id)
-                    # Acknowledge command with ok: true
-                    self.publish_command_ack(command, cmd_id)
-                else:
-                    logger.warning("Command missing cmd_id: %s", payload)
-            else:
-                logger.warning("Unexpected message topic format: %s", topic)
-
-        except json.JSONDecodeError:
-            logger.warning("Invalid JSON payload on topic %s: %s", topic, msg.payload)
         except Exception as e:
             logger.error("Error processing message: %s", e, exc_info=True)
 
     def publish_telemetry(self) -> None:
-        """Publish moisture telemetry reading."""
+        """Generate and publish moisture telemetry reading via core layer."""
         moisture_value = self.moisture_sensor.get_reading()
         ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
-        topic = f"planty/plant/{self.plant_id}/telemetry/moisture"
-        payload = json.dumps({"value": moisture_value, "ts": ts})
+        # Send MetricSample event to core
+        metric_sample = MetricSample(metric="moisture", value=moisture_value, ts=ts)
+        actions = self.core.handle_event(metric_sample)
+        self._execute_actions(actions)
 
-        result = self.client.publish(topic, payload, qos=1)
-        if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            logger.info(
-                "Published telemetry: moisture=%.2f to %s", moisture_value, topic
-            )
-        else:
-            logger.error("Failed to publish telemetry, rc=%s", result.rc)
+        logger.info("Published telemetry: moisture=%.2f", moisture_value)
 
     def publish_status(self, online: bool = True) -> None:
-        """Publish online/offline status."""
+        """Publish online/offline status via core layer."""
         ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
-
-        topic = f"planty/plant/{self.plant_id}/status"
-        payload = json.dumps({"online": online, "ts": ts})
-
-        result = self.client.publish(topic, payload, qos=1)
-        if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            logger.info("Published status: online=%s to %s", online, topic)
+        if online:
+            actions = self.core.handle_event(Tick(ts=ts))
         else:
-            logger.error("Failed to publish status, rc=%s", result.rc)
+            actions = self.core.shutdown(ts=ts)
+        self._execute_actions(actions)
+        logger.info("Published status: online=%s", online)
 
     def publish_command_ack(self, command: str, cmd_id: str) -> None:
-        """Publish command acknowledgment with ok: true."""
+        """
+        Publish command acknowledgment.
+
+        Note: This is now handled by core layer via CommandResult events.
+        This method is kept for backward compatibility with tests.
+        """
         ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
         topic = f"planty/plant/{self.plant_id}/command/{command}/ack"

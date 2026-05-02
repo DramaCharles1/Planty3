@@ -158,7 +158,7 @@ class CoreLayer:
         if isinstance(event, MqttMessage):
             return self._handle_mqtt_message(event)
         if isinstance(event, Tick):
-            return []
+            return [self._build_status_action(True, event.ts)]
         return [
             self._build_log(
                 "warning", "unknown_event", {"event_type": type(event).__name__}

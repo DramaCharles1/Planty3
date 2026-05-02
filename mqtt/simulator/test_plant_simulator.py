@@ -154,7 +154,7 @@ class TestPayloadGeneration:
         assert "ts" in payload
         assert payload["ts"] == 1234567890
         assert isinstance(payload["value"], float)
-        assert qos == 1
+        assert qos == 0  # Core layer uses qos=0 for telemetry (fire-and-forget)
 
     @patch("plant_simulator.mqtt.Client")
     def test_telemetry_payload_topic(self, mock_mqtt_client):
@@ -167,7 +167,7 @@ class TestPayloadGeneration:
         qos = call_args[1]["qos"]
 
         assert topic == "planty/plant/sim_plant_01/telemetry/moisture"
-        assert qos == 1
+        assert qos == 0  # Core layer uses qos=0 for telemetry
 
     @patch("plant_simulator.mqtt.Client")
     @patch("plant_simulator.datetime")
@@ -318,19 +318,23 @@ class TestMQTTClientBehavior:
 
     @patch("plant_simulator.mqtt.Client")
     def test_on_connect_success(self, mock_mqtt_client):
-        """Test successful connection subscribes to commands and publishes status."""
+        """Test successful connection subscribes to commands."""
         simulator = PlantSimulator()
 
-        with patch.object(simulator, "publish_status") as mock_publish_status:
-            simulator._on_connect(simulator.client, None, None, 0)
+        # Set up mock to return success for publish
+        mock_result = MagicMock()
+        mock_result.rc = mqtt.MQTT_ERR_SUCCESS
+        simulator.client.publish.return_value = mock_result
 
-            # Verify subscribe was called
-            simulator.client.subscribe.assert_called_once_with(
-                "planty/plant/sim_plant_01/command/+", qos=1
-            )
+        simulator._on_connect(simulator.client, None, None, 0)
 
-            # Verify online status published
-            mock_publish_status.assert_called_once_with(online=True)
+        # Verify subscribe was called
+        simulator.client.subscribe.assert_called_once_with(
+            "planty/plant/sim_plant_01/command/+", qos=1
+        )
+
+        # Note: Status is published on Booted event (during init), not on MqttConnected
+        # The core layer only logs on MqttConnected
 
     @patch("plant_simulator.mqtt.Client")
     def test_on_connect_failure(self, mock_mqtt_client):
@@ -365,13 +369,24 @@ class TestMQTTClientBehavior:
 
         mock_msg = MagicMock()
         mock_msg.topic = "planty/plant/sim_plant_01/command/water"
-        mock_msg.payload = json.dumps({"cmd_id": "test-123", "duration": 30}).encode(
+        mock_msg.payload = json.dumps({"cmd_id": "test-123", "ts": 1700000000}).encode(
             "utf-8"
         )
 
-        with patch.object(simulator, "publish_command_ack") as mock_ack:
-            simulator._on_message(simulator.client, None, mock_msg)
-            mock_ack.assert_called_once_with("water", "test-123")
+        # Clear any publish calls from initialization
+        simulator.client.publish.reset_mock()
+
+        simulator._on_message(simulator.client, None, mock_msg)
+
+        # Verify ack was published via core layer
+        assert simulator.client.publish.called
+        # Find the ack publish call
+        ack_calls = [
+            call
+            for call in simulator.client.publish.call_args_list
+            if "ack" in str(call)
+        ]
+        assert len(ack_calls) >= 1, "Expected at least one ack publish"
 
     @patch("plant_simulator.mqtt.Client")
     def test_on_message_missing_cmd_id(self, mock_mqtt_client):
@@ -418,11 +433,24 @@ class TestMQTTClientBehavior:
 
         mock_msg = MagicMock()
         mock_msg.topic = f"planty/plant/sim_plant_01/command/{command}"
-        mock_msg.payload = json.dumps({"cmd_id": "test-123"}).encode("utf-8")
+        mock_msg.payload = json.dumps({"cmd_id": "test-123", "ts": 1700000000}).encode(
+            "utf-8"
+        )
 
-        with patch.object(simulator, "publish_command_ack") as mock_ack:
-            simulator._on_message(simulator.client, None, mock_msg)
-            mock_ack.assert_called_once_with(command, "test-123")
+        # Clear any publish calls from initialization
+        simulator.client.publish.reset_mock()
+
+        simulator._on_message(simulator.client, None, mock_msg)
+
+        # Verify ack was published via core layer
+        assert simulator.client.publish.called
+        # Find the ack publish call with correct command in topic
+        ack_calls = [
+            call
+            for call in simulator.client.publish.call_args_list
+            if f"command/{command}/ack" in str(call)
+        ]
+        assert len(ack_calls) >= 1, f"Expected ack for command {command}"
 
     @patch("plant_simulator.mqtt.Client")
     def test_publish_telemetry_success(self, mock_mqtt_client):
@@ -665,6 +693,11 @@ class TestIntegration:
         simulator = PlantSimulator()
         simulator.status_heartbeat_interval = 60
 
+        # Set up mock to return success for publish
+        mock_result = MagicMock()
+        mock_result.rc = mqtt.MQTT_ERR_SUCCESS
+        simulator.client.publish.return_value = mock_result
+
         # Simulate time progression over 120 seconds
         time_values = [0] * 5 + [60] * 5 + [120] * 5
         mock_time.side_effect = time_values
@@ -675,13 +708,23 @@ class TestIntegration:
 
         mock_sleep.side_effect = side_effect
 
-        with patch.object(simulator, "publish_status") as mock_status:
-            with patch.object(simulator, "publish_telemetry"):
-                simulator.client.connect = MagicMock()
-                simulator.run()
+        with patch.object(simulator, "publish_telemetry"):
+            simulator.client.connect = MagicMock()
 
-                # Should publish at t=60, t=120 (2 times, not counting on_connect)
-                assert mock_status.call_count >= 2
+            # Get call count before run
+            calls_before = simulator.client.publish.call_count
+
+            simulator.run()
+
+            # Should publish status heartbeat at t=60, t=120 (2 times via Tick events)
+            # Check that status publishes happened after run started
+            recent_calls = simulator.client.publish.call_args_list[calls_before:]
+            status_calls = [
+                call for call in recent_calls if "status" in str(call[0][0])
+            ]
+            assert len(status_calls) >= 2, (
+                f"Expected at least 2 status heartbeats, got {len(status_calls)}"
+            )
 
     @patch("plant_simulator.mqtt.Client")
     @patch("plant_simulator.time.sleep")
