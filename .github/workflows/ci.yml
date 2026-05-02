@@ -47,7 +47,7 @@ jobs:
     - name: Run backend tests with coverage
       run: docker compose exec -T backend pytest --cov
     - name: Build simulator test image
-      run: cd mqtt/simulator && docker build -t planty3-simulator-test -f Dockerfile .
+      run: cd mqtt && docker build -t planty3-simulator-test -f simulator/Dockerfile .
     - name: Run core layer tests with coverage
       run: docker run --rm -e PYTHONPATH=/app -v $(pwd)/mqtt/core:/app planty3-simulator-test pytest --cov=core_layer --cov-report=term-missing
     - name: Run simulator tests with coverage

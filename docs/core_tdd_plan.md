@@ -170,6 +170,38 @@ Adapter integration acceptance checks:
 - Adapter executes `Publish` and `ExecuteCommand` actions correctly.
 - End-to-end command -> ack path works with local broker.
 
+### Simulator as First Adapter
+
+The plant simulator in `/mqtt/simulator` should be refactored to use the core layer
+as its first adapter integration. This provides:
+
+- End-to-end validation of the core layer contract
+- Reference implementation for future hardware adapters (Raspberry Pi, ESP32, Arduino)
+- Proof that the event/action boundary works with real MQTT broker
+
+Simulator adapter responsibilities:
+
+- Translate `paho.mqtt.client` callbacks into core events (`MqttConnected`, `MqttDisconnected`, `MqttMessage`)
+- Execute core actions: `Publish` → `client.publish()`, `ExecuteCommand` → simulate actuator, `Log` → `logging`
+- Generate sensor events: `MetricSample` from moisture sensor simulation
+- Handle `Tick` events for periodic telemetry/heartbeat
+- Manage lifecycle: boot → connect → run loop → shutdown
+
+Simulator should maintain existing behavior:
+
+- Publishes moisture telemetry every `TELEMETRY_INTERVAL` seconds
+- Publishes online status on connect and every `STATUS_HEARTBEAT_INTERVAL` seconds
+- Subscribes to commands on `planty/plant/{plant_id}/command/+`
+- Acknowledges all commands with `ok: true`
+
+Implementation approach:
+
+1. Keep existing `MoistureSensor` class (sensor simulation logic)
+2. Replace direct MQTT publish logic with core layer event/action flow
+3. Add adapter glue: MQTT callbacks → core events, core actions → MQTT operations
+4. Preserve all existing tests (update implementation details as needed)
+5. Add new integration tests validating core layer usage
+
 ## 7. Definition of Done
 
 Core layer is "done" when:
@@ -179,15 +211,17 @@ Core layer is "done" when:
 - Core follows `docs/core_contract.md` event/action boundary.
 - All required minimum cases in section 5 pass.
 - Basic adapter integration smoke test passes on at least one hardware target.
+- Simulator successfully uses core layer and maintains existing behavior.
 
 ## 8. Suggested Work Order (Short Checklist)
 
-1. Add empty core module + empty tests.
-2. Implement startup path via TDD.
-3. Implement topics via TDD.
-4. Implement payload validation via TDD.
-5. Implement commands + ack via TDD.
-6. Implement deduplication via TDD.
-7. Implement telemetry/status publish via TDD.
-8. Harden error handling via TDD.
-9. Refactor and freeze contract.
+1. Add empty core module + empty tests. ✅
+2. Implement startup path via TDD. ✅
+3. Implement topics via TDD. ✅
+4. Implement payload validation via TDD. ✅
+5. Implement commands + ack via TDD. ✅
+6. Implement deduplication via TDD. ✅
+7. Implement telemetry/status publish via TDD. ✅
+8. Harden error handling via TDD. ✅
+9. Refactor and freeze contract. ✅
+10. Refactor simulator to use core layer as first adapter integration. ⬅️ NEXT
